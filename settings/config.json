@@ -1,0 +1,56 @@
+{
+  "line_color": [255, 0, 0],
+  "offset": 8,
+  "sleeppy": 1000,
+  "BOUND_RATE": 9600,
+  "timeout": 15,
+  "min_send_kg": -1,
+
+  "crop_left": 0,
+  "crop_right": 0,
+
+  "width_scale": 16,
+  "height_scale": 9,
+
+  "default_send_time": 60,
+  "min_time": 15,
+  "max_time": 300,
+
+  "default_frame_count": 128,
+  "min_frame_count": 64,
+  "max_frame_count": 1024,
+
+  "default_distance": 6,
+  "min_distance": 3,
+  "max_distance": 10,
+
+  "default_det_conf": 0.7,
+  "min_det_conf": 0.6,
+  "max_det_conf": 0.8,
+
+  "default_rec_conf": 0.75,
+  "min_rec_conf": 0.7,
+  "max_rec_conf": 0.85,
+
+  "top_offset": 40,
+  "bottom_offset": 1,
+  "left_offset": 2,
+  "right_offset": 2,
+
+  "min_side": 1,
+  "max_side": 90,
+
+  "wagonAttachId": "wagonImage1Base64",
+  "wagonAttachId2": "wagonImage2Base64",
+  "wagonNumberAttachId": "wagonNumberImageBase64",
+
+  "wagonNumber": "wagonNumber",
+  "scaleNumber": "scaleNumber",
+  "stationCode": "stationCode",
+  "createdDate": "createdDate",
+  "default_cam_url": "rtsp://admin:password@192.168.1.64:554",
+
+  "base_url": "ai-project.das-uty.uz",
+  "post_url": "https://ai-project.das-uty.uz/api/wagon-scale-values",
+  "get_token_url": "https://ai-project.das-uty.uz/api/auth/device-login"
+}
