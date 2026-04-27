@@ -270,13 +270,17 @@ class HistoryWidget(QWidget):
                     createdDate: created_date,
                     sentAt: sent_at,
                 }
-                ans, er = self.backup_db.insert_history(data=dx_)
+                real_id, er = self.backup_db.insert_history(data=dx_)
                 if er:
                     show_message(
                         stl=self.style_name,
                         title="Xatolik",
                         message=f"[HistoryWidget.backup_db.insert_history] {er}"
                     )
+                elif real_id:
+                    # DB tomonidan berilgan haqiqiy ID ni ishlatamiz
+                    idx = int(real_id)
+                    row_data[ID] = idx
 
             month_key, y, m = self._make_month_key(row_data.get(createdDate))
             tree = self.trees_by_month.get(month_key)

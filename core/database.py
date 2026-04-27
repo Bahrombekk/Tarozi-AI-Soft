@@ -140,7 +140,8 @@ class BufferDB:
             print(f"[db.BufferDB.insert] {err}")
             return False, str(err)
 
-    def insert_history(self, data: dict) -> tuple[bool, str]:
+    def insert_history(self, data: dict) -> tuple[int | bool, str]:
+        """Yangi tarix qatori qo'shadi. Muvaffaqiyatli bo'lsa haqiqiy DB ID ni qaytaradi."""
         try:
             self._ensure_history_table()
             fields = self._extract_fields(data)
@@ -154,9 +155,10 @@ class BufferDB:
                         {createdDate}, {sentAt}
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """, (0, *fields, sent_at))
+                new_id = self.cursor.lastrowid
                 self.conn.commit()
 
-            return True, ""
+            return new_id, ""
         except Exception as err:
             log(message=f"[db.BufferDB.insert_history] {err}")
             print(f"[db.BufferDB.insert_history] {err}")

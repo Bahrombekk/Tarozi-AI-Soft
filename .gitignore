@@ -11,7 +11,8 @@ build/
 venv/
 .venv/
 env/
-
+success/
+backup/
 # IDE
 .idea/
 .vscode/

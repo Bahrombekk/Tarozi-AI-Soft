@@ -144,7 +144,19 @@ def ask_message(stl: str, title: str = "Tanlang", message: str = "Tanlang") -> i
     return msb.exec()
 
 
+_active_message_box: QMessageBox | None = None
+
+
 def show_message(stl: str, message: str = "Xabar", title: str = "Xabar") -> int:
+    global _active_message_box
+    # Ochiq dialog bo'lsa yopamiz — bir vaqtda faqat bitta dialog ko'rinsin
+    if _active_message_box is not None:
+        try:
+            _active_message_box.close()
+        except Exception:
+            pass
+        _active_message_box = None
+
     msb = QMessageBox()
     msb.setIcon(QMessageBox.Icon.Information)
     msb.setStandardButtons(QMessageBox.StandardButton.Yes)
@@ -171,7 +183,10 @@ def show_message(stl: str, message: str = "Xabar", title: str = "Xabar") -> int:
     msb.setText(message)
     msb.setWindowTitle(title)
     msb.setDefaultButton(QMessageBox.StandardButton.No)
-    return msb.exec()
+    _active_message_box = msb
+    result = msb.exec()
+    _active_message_box = None
+    return result
 
 
 # ---------- Directories ----------

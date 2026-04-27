@@ -78,6 +78,16 @@ def get_token(data: dict, bs_url: str = base_url) -> str:
     return token
 
 
+def refresh_token(data: dict, bs_url: str = base_url) -> str:
+    """Kesh tokenni o'chirib, serverdan yangi token oladi (401 bo'lganda ishlatiladi)."""
+    try:
+        if os.path.exists("settings/tkn.bin"):
+            os.remove("settings/tkn.bin")
+    except Exception as err:
+        log(message=f"[api.refresh_token] tkn.bin o'chirishda xato: {err}")
+    return get_token(data=data, bs_url=bs_url)
+
+
 def image_to_base64(img: np.ndarray | None) -> str | None:
     try:
         if not isinstance(img, np.ndarray):

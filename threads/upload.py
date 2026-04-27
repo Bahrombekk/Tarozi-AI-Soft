@@ -16,7 +16,7 @@ from core.config import (
     identifier, num_count, backup_folder, post_url, timeout, log,
 )
 from core.database import BufferDB, current_time
-from network.api import get_token, check_server, image_to_base64
+from network.api import get_token, refresh_token, check_server, image_to_base64
 from utils.image import qpixmap_to_ndarray
 import sqlite3 as sql
 
@@ -52,8 +52,8 @@ class BackupUploadThread(QThread):
 
     def _refresh_token(self) -> bool:
         try:
-            new_token = get_token(data=self.login_data, bs_url=self.bs_url)
-            if new_token:
+            new_token = refresh_token(data=self.login_data, bs_url=self.bs_url)
+            if new_token and new_token != "TOKEN_OLINMADI":
                 self.headers["Authorization"] = f"Bearer {new_token}"
                 return True
         except Exception as err:
@@ -151,8 +151,8 @@ class UploadThread(QThread):
     def _refresh_token(self) -> bool:
         """Token yangilaydi. Muvaffaqiyatli bo'lsa True qaytaradi."""
         try:
-            new_token = get_token(data=self.login_data, bs_url=self.base_url)
-            if new_token:
+            new_token = refresh_token(data=self.login_data, bs_url=self.base_url)
+            if new_token and new_token != "TOKEN_OLINMADI":
                 self.headers["Authorization"] = f"Bearer {new_token}"
                 return True
         except Exception as err:
