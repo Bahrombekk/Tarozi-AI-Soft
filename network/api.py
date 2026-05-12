@@ -2,11 +2,14 @@ from __future__ import annotations
 import base64
 import os
 import socket
+import warnings
 from urllib.parse import urlparse
 
 import cv2
 import numpy as np
 import requests
+import urllib3
+warnings.filterwarnings("ignore", category=urllib3.exceptions.InsecureRequestWarning)
 
 from core.config import log, timeout, get_token_url, URL_NOT_FOUND, base_url
 from core.cipher import Cipher
@@ -105,16 +108,24 @@ def get_base_url(url: str = get_token_url) -> str:
 
 
 def ping(station_code: str, ping_url: str | None = None) -> bool:
-    url = ping_url or f"https://{base_url}/api/wagon-scale-values/ping"
-    try:
-        response = requests.post(
-            url=url,
-            json={"stationCode": str(station_code)},
-            headers={"Content-Type": "application/json"},
-            timeout=10,
-        )
-        log(message=f"[api.ping] status={response.status_code} stationCode={station_code}", level="INFO")
-        return response.status_code in (200, 201)
-    except Exception as err:
-        log(message=f"[api.ping] {err}", level="ERROR")
-        return False
+    urls = (
+        [ping_url] if ping_url
+        else [
+            f"https://{base_url}/api/wagon-scale-values/ping",
+            f"http://{base_url}/api/wagon-scale-values/ping",
+        ]
+    )
+    for url in urls:
+        try:
+            response = requests.post(
+                url=url,
+                json={"stationCode": str(station_code)},
+                headers={"Content-Type": "application/json"},
+                timeout=8,
+                verify=False,
+            )
+            log(message=f"[api.ping] status={response.status_code} stationCode={station_code}", level="INFO")
+            return response.status_code in (200, 201)
+        except Exception as err:
+            log(message=f"[api.ping] {url}: {err}", level="WARNING")
+    return False

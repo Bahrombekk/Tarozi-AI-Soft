@@ -18,6 +18,7 @@ import cv2
 
 class VideoThread(BaseVideoThread):
     data_signal = pyqtSignal(dict)
+    dual_signal = pyqtSignal(list)
     inner_signal = pyqtSignal(bool)
 
     def __init__(self, cam_url: str, lined: bool, fps: bool, is_half: bool,
@@ -61,7 +62,13 @@ class VideoThread(BaseVideoThread):
                     now = time.time()
                     self.fps_signal.emit(f"FPS: {1 / max(0.01, now - start_time):.1f}")
                     start_time = now
-                if data.get(wagonNumber, identifier * num_count).count(identifier) <= 3:
+                candidates = data.pop("candidates", None)
+                if candidates:
+                    self.cnt += 1
+                    if self.cnt % self.max_count == 0:
+                        self.cnt = 1
+                        self.dual_signal.emit(candidates)
+                elif data.get(wagonNumber, identifier * num_count).count(identifier) <= 3:
                     self.cnt += 1
                     if self.cnt % self.max_count == 0:
                         self.cnt = 1
@@ -121,7 +128,14 @@ class VideoThread(BaseVideoThread):
                 if coords:
                     coords.sort(key=lambda x: (x[wagonNumber].count(identifier), -x[CONF],
                                                x[BBOX][0], x[BBOX][1]))
-                    return cmds, coords[0]
+                    full_valid = [c for c in coords
+                                  if c[wagonNumber].count(identifier) == 0
+                                  and len(c[wagonNumber]) == num_count]
+                    best = coords[0]
+                    if len(full_valid) >= 2:
+                        best = dict(best)
+                        best["candidates"] = full_valid
+                    return cmds, best
             return cmds, {wagonAttachId: img}
         except Exception as err:
             log(message=f"[VideoThread._detect] {err}")

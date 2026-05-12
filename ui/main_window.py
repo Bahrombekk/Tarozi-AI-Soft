@@ -53,6 +53,19 @@ btn_disabled: bool = True
 demo_video: bool = False
 
 
+def _fmt_time(iso: str) -> str:
+    """'2026-05-12T13:12:01Z' (UTC) → lokal vaqt '18:12:01'"""
+    try:
+        import datetime as _dt
+        utc_dt = _dt.datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=_dt.timezone.utc)
+        return utc_dt.astimezone().strftime("%H:%M:%S")
+    except Exception:
+        try:
+            return iso.split("T")[1].replace("Z", "").split(".")[0]
+        except Exception:
+            return iso
+
 
 # SendingData, SavingData → ui.models
 # SettingsManager → ui.settings_manager
@@ -1327,6 +1340,7 @@ class App(QMainWindow):
                     )
                     self.video_thread_left.image_signal.connect(self.update_frame_left)
                     self.video_thread_left.data_signal.connect(self.get_handle_data_left)
+                    self.video_thread_left.dual_signal.connect(self.get_dual_data_left)
                     self.video_thread_left.error_signal.connect(self.get_error_message_left)
                     self.video_thread_left.disconnected_signal.connect(self.disconnected_left)
                     self.video_thread_left.inner_signal.connect(self.inner_left)
@@ -1435,6 +1449,7 @@ class App(QMainWindow):
                     )
                     self.video_thread_right.image_signal.connect(self.update_frame_right)
                     self.video_thread_right.data_signal.connect(self.get_handle_data_right)
+                    self.video_thread_right.dual_signal.connect(self.get_dual_data_right)
                     self.video_thread_right.error_signal.connect(self.get_error_message_right)
                     self.video_thread_right.disconnected_signal.connect(self.disconnected_right)
                     self.video_thread_right.inner_signal.connect(self.inner_right)
@@ -1642,6 +1657,36 @@ class App(QMainWindow):
                 radius=8,
             ))
 
+    def get_dual_data_left(self, candidates: list):
+        if getattr(self, "_dual_dialog_open", False):
+            return
+        try:
+            from ui.dialogs import WagonChoiceDialog
+            from PyQt6.QtWidgets import QDialog
+            self._dual_dialog_open = True
+            dlg = WagonChoiceDialog(style_name=self.style_name, candidates=candidates)
+            if dlg.exec() == QDialog.DialogCode.Accepted and dlg.selected:
+                self.get_handle_data_left(dlg.selected)
+        except (Exception, ValueError) as err:
+            log(message=f"[App.get_dual_data_left] {err}")
+        finally:
+            self._dual_dialog_open = False
+
+    def get_dual_data_right(self, candidates: list):
+        if getattr(self, "_dual_dialog_open", False):
+            return
+        try:
+            from ui.dialogs import WagonChoiceDialog
+            from PyQt6.QtWidgets import QDialog
+            self._dual_dialog_open = True
+            dlg = WagonChoiceDialog(style_name=self.style_name, candidates=candidates)
+            if dlg.exec() == QDialog.DialogCode.Accepted and dlg.selected:
+                self.get_handle_data_right(dlg.selected)
+        except (Exception, ValueError) as err:
+            log(message=f"[App.get_dual_data_right] {err}")
+        finally:
+            self._dual_dialog_open = False
+
     def get_auto_data_left(self, data: dict):
         try:
             if self.is_timeout:
@@ -1738,20 +1783,23 @@ class App(QMainWindow):
             print(f"[MainApp.get_auto_data_right] {err}")
 
     def upload_handle_data_left(self):
+        from ui.dialogs import RepeatWagonDialog
+        from PyQt6.QtWidgets import QDialog as _QDialog
         if max(self.last_scale_weight) > min_send_kg:
             if self.video_thread_left is not None:
                 if self.video_thread_left.running:
-                    if self.last_data_left.get(wagonNumber,
-                                               identifier * num_count) in self.wagon_ids and identifier not in self.last_data_left.get(
-                        wagonNumber, identifier * num_count):
-                        ans: int = ask_message(
-                            stl=self.style_name,
-                            title="Savol",
-                            message=f"{self.last_data_left.get(wagonNumber, identifier * num_count)} avval yuborilgan, yana yubormoqchimisiz?"
+                    wn = self.last_data_left.get(wagonNumber, identifier * num_count)
+                    if wn in self.wagon_ids and identifier not in wn:
+                        rec = BufferDB().get_today_wagon(wn)
+                        dlg = RepeatWagonDialog(
+                            style_name=self.style_name,
+                            wagon_number=wn,
+                            weighed_at=_fmt_time(rec["createdDate"]) if rec else None,
+                            weight_kg=str(rec[scaleNumber]) if rec else None,
                         )
-                        if ans != QMessageBox.StandardButton.Yes:
+                        if dlg.exec() != _QDialog.DialogCode.Accepted:
                             return
-                    self.wagon_ids.append(self.last_data_left.get(wagonNumber, identifier * num_count))
+                    self.wagon_ids.append(wn)
                     self.progressbar: ProgressBar = ProgressBar()
                     self.progressbar.change_style(style_name=self.style_name)
                     self.progressbar.show()
@@ -1774,20 +1822,23 @@ class App(QMainWindow):
             )
 
     def upload_handle_data_right(self):
+        from ui.dialogs import RepeatWagonDialog
+        from PyQt6.QtWidgets import QDialog as _QDialog
         if max(self.last_scale_weight) > min_send_kg:
             if self.video_thread_right is not None:
                 if self.video_thread_right.running:
-                    if self.last_data_right.get(wagonNumber,
-                                                identifier * num_count) in self.wagon_ids and identifier not in self.last_data_right.get(
-                        wagonNumber, identifier * num_count):
-                        ans: int = ask_message(
-                            stl=self.style_name,
-                            title="So'rov",
-                            message=f"{self.last_data_right.get(wagonNumber, identifier * num_count)} avval yuborilgan, yana yubormoqchimisiz?"
+                    wn = self.last_data_right.get(wagonNumber, identifier * num_count)
+                    if wn in self.wagon_ids and identifier not in wn:
+                        rec = BufferDB().get_today_wagon(wn)
+                        dlg = RepeatWagonDialog(
+                            style_name=self.style_name,
+                            wagon_number=wn,
+                            weighed_at=_fmt_time(rec["createdDate"]) if rec else None,
+                            weight_kg=str(rec[scaleNumber]) if rec else None,
                         )
-                        if ans != QMessageBox.StandardButton.Yes:
+                        if dlg.exec() != _QDialog.DialogCode.Accepted:
                             return
-                    self.wagon_ids.append(self.last_data_right.get(wagonNumber, identifier * num_count))
+                    self.wagon_ids.append(wn)
                     self.progressbar: ProgressBar = ProgressBar()
                     self.progressbar.change_style(style_name=self.style_name)
                     self.progressbar.show()

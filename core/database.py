@@ -267,6 +267,25 @@ class BufferDB:
             print(f"[db.BufferDB.delete] {err}")
             return False, str(err)
 
+    def get_today_wagon(self, wagon_num: str) -> dict | None:
+        """Bugungi sanada tortilgan wagon_num uchun oxirgi yozuvni qaytaradi."""
+        try:
+            today = datetime.date.today().isoformat()  # "2026-05-12"
+            self._ensure_history_table()
+            with self._lock:
+                row = self.cursor.execute(
+                    f"""SELECT {wagonNumber}, {scaleNumber}, {createdDate}
+                        FROM {self.history_table_name}
+                        WHERE {wagonNumber} = ? AND {createdDate} LIKE ?
+                        ORDER BY {createdDate} DESC LIMIT 1;""",
+                    (wagon_num, f"{today}%"),
+                ).fetchone()
+            if row:
+                return {wagonNumber: row[0], scaleNumber: row[1], createdDate: row[2]}
+        except Exception as err:
+            log(message=f"[db.get_today_wagon] {err}")
+        return None
+
     def close(self):
         with self._lock:
             self.cursor.close()

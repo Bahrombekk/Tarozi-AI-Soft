@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+from PyQt6.QtWidgets import QDialog
 
 from core.config import (
     log, identifier, num_count,
@@ -122,6 +123,34 @@ class DataMixin:
             self.send_auto()
         except (Exception, ValueError) as err:
             log(message=f"[App.get_auto_data_right] {err}")
+
+    def get_dual_data_left(self, candidates: list):
+        if getattr(self, "_dual_dialog_open", False):
+            return
+        try:
+            from ui.dialogs import WagonChoiceDialog
+            self._dual_dialog_open = True
+            dlg = WagonChoiceDialog(style_name=self.style_name, candidates=candidates)
+            if dlg.exec() == QDialog.DialogCode.Accepted and dlg.selected:
+                self.get_handle_data_left(dlg.selected)
+        except (Exception, ValueError) as err:
+            log(message=f"[App.get_dual_data_left] {err}")
+        finally:
+            self._dual_dialog_open = False
+
+    def get_dual_data_right(self, candidates: list):
+        if getattr(self, "_dual_dialog_open", False):
+            return
+        try:
+            from ui.dialogs import WagonChoiceDialog
+            self._dual_dialog_open = True
+            dlg = WagonChoiceDialog(style_name=self.style_name, candidates=candidates)
+            if dlg.exec() == QDialog.DialogCode.Accepted and dlg.selected:
+                self.get_handle_data_right(dlg.selected)
+        except (Exception, ValueError) as err:
+            log(message=f"[App.get_dual_data_right] {err}")
+        finally:
+            self._dual_dialog_open = False
 
     def get_error_message_left(self, msg: str):
         show_message(stl=self.style_name, message=f"Xatolik sodir bo'ldi. [Chap] \n{msg}")

@@ -3,7 +3,6 @@ from __future__ import annotations
 from copy import deepcopy
 
 import numpy as np
-from PyQt6.QtWidgets import QMessageBox
 
 from core.config import (
     log, identifier, num_count,
@@ -13,11 +12,26 @@ from core.config import (
     post_url, base_url, get_token_url, min_send_kg,
     wagonNumber, wagonAttachId, wagonAttachId2, wagonNumberAttachId,
 )
-from core.database import current_time
+from core.database import current_time, BufferDB
 from threads.upload import UploadThread
-from ui.dialogs import ProgressBar
-from utils.helpers import show_message, ask_message
+from ui.dialogs import ProgressBar, RepeatWagonDialog
+from PyQt6.QtWidgets import QDialog
+from utils.helpers import show_message
 from utils.image import qpixmap_to_ndarray
+
+
+def _fmt_time(iso: str) -> str:
+    """'2026-05-12T13:12:01Z' (UTC) → lokal vaqt '18:12:01'"""
+    try:
+        import datetime as _dt
+        utc_dt = _dt.datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=_dt.timezone.utc)
+        return utc_dt.astimezone().strftime("%H:%M:%S")
+    except Exception:
+        try:
+            return iso.split("T")[1].replace("Z", "").split(".")[0]
+        except Exception:
+            return iso
 
 
 class UploadMixin:
@@ -53,9 +67,14 @@ class UploadMixin:
             if self.video_thread_left and self.video_thread_left.running:
                 wn = self._wagon_num_left()
                 if wn in self.wagon_ids and identifier not in wn:
-                    ans = ask_message(stl=self.style_name, title="Savol",
-                                      message=f"{wn} avval yuborilgan, yana yubormoqchimisiz?")
-                    if ans != QMessageBox.StandardButton.Yes:
+                    rec = BufferDB().get_today_wagon(wn)
+                    dlg = RepeatWagonDialog(
+                        style_name=self.style_name,
+                        wagon_number=wn,
+                        weighed_at=_fmt_time(rec["createdDate"]) if rec else None,
+                        weight_kg=str(rec["scaleNumber"]) if rec else None,
+                    )
+                    if dlg.exec() != QDialog.DialogCode.Accepted:
                         return
                 self.wagon_ids.append(wn)
                 self.progressbar = ProgressBar()
@@ -74,9 +93,14 @@ class UploadMixin:
             if self.video_thread_right and self.video_thread_right.running:
                 wn = self._wagon_num_right()
                 if wn in self.wagon_ids and identifier not in wn:
-                    ans = ask_message(stl=self.style_name, title="So'rov",
-                                      message=f"{wn} avval yuborilgan, yana yubormoqchimisiz?")
-                    if ans != QMessageBox.StandardButton.Yes:
+                    rec = BufferDB().get_today_wagon(wn)
+                    dlg = RepeatWagonDialog(
+                        style_name=self.style_name,
+                        wagon_number=wn,
+                        weighed_at=_fmt_time(rec["createdDate"]) if rec else None,
+                        weight_kg=str(rec["scaleNumber"]) if rec else None,
+                    )
+                    if dlg.exec() != QDialog.DialogCode.Accepted:
                         return
                 self.wagon_ids.append(wn)
                 self.progressbar = ProgressBar()
