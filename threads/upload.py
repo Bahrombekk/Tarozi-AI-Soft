@@ -40,19 +40,20 @@ class BackupUploadThread(QThread):
     upload_signal = pyqtSignal(bool, dict)
     error_signal = pyqtSignal(str)
 
-    def __init__(self, login_data: dict, bs_url: str):
+    def __init__(self, login_data: dict, bs_url: str, login_url: str | None = None):
         super().__init__()
         self.login_data: dict = login_data
         self.bs_url: str = bs_url
+        self.login_url: str | None = login_url
         self.backup_db = BufferDB()
         self.headers: dict = {
-            "Authorization": f"Bearer {get_token(data=self.login_data, bs_url=bs_url)}",
+            "Authorization": f"Bearer {get_token(data=self.login_data, login_url=login_url)}",
             "Content-Type": "application/json",
         }
 
     def _refresh_token(self) -> bool:
         try:
-            new_token = refresh_token(data=self.login_data, bs_url=self.bs_url)
+            new_token = refresh_token(data=self.login_data, login_url=self.login_url)
             if new_token and new_token != "TOKEN_OLINMADI":
                 self.headers["Authorization"] = f"Bearer {new_token}"
                 return True
@@ -128,16 +129,17 @@ class UploadThread(QThread):
 
     def __init__(self, data: SendingData, img_id: Union[np.ndarray, None],
                  img_id2: Union[np.ndarray, None], img_number: Union[np.ndarray, None],
-                 bs_url: str, login_data: dict):
+                 bs_url: str, login_data: dict, login_url: str | None = None):
         super().__init__()
         self.base_url: str = bs_url
         self.login_data: dict = login_data
+        self.login_url: str | None = login_url
         self.backup_db = BufferDB()
         self.img_id = img_id
         self.img_id2 = img_id2
         self.img_number = img_number
         self.headers: dict = {
-            "Authorization": f"Bearer {get_token(data=self.login_data, bs_url=bs_url)}",
+            "Authorization": f"Bearer {get_token(data=self.login_data, login_url=login_url)}",
             "Content-Type": "application/json",
         }
         self.data: dict = {
@@ -151,7 +153,7 @@ class UploadThread(QThread):
     def _refresh_token(self) -> bool:
         """Token yangilaydi. Muvaffaqiyatli bo'lsa True qaytaradi."""
         try:
-            new_token = refresh_token(data=self.login_data, bs_url=self.base_url)
+            new_token = refresh_token(data=self.login_data, login_url=self.login_url)
             if new_token and new_token != "TOKEN_OLINMADI":
                 self.headers["Authorization"] = f"Bearer {new_token}"
                 return True

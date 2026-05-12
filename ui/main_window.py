@@ -669,7 +669,8 @@ class App(QMainWindow):
             login_data={
                 "login": self.config.get(USERNAME, default_username),
                 "password": self.config.get(PASSWORD, default_password)
-            }
+            },
+            login_url=self.config.get(LOGIN_URL, get_token_url),
         )
         self.backup_thread.upload_signal.connect(self.backup_upload_response)
         self.backup_thread.error_signal.connect(self.backup_upload_error)

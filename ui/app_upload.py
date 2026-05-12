@@ -8,9 +8,9 @@ from PyQt6.QtWidgets import QMessageBox
 from core.config import (
     log, identifier, num_count,
     AUTO, BTN_DISABLE, SCALE_CODE, STATION_CODE,
-    USERNAME, PASSWORD, BASE_URL, UPLOAD_URL,
+    USERNAME, PASSWORD, BASE_URL, UPLOAD_URL, LOGIN_URL,
     default_station_code, default_scale_code, default_username, default_password,
-    post_url, base_url, min_send_kg,
+    post_url, base_url, get_token_url, min_send_kg,
     wagonNumber, wagonAttachId, wagonAttachId2, wagonNumberAttachId,
 )
 from core.database import current_time
@@ -96,6 +96,7 @@ class UploadMixin:
             bs_url=self.config.get(BASE_URL, base_url),
             login_data={"login": self.config.get(USERNAME, default_username),
                         "password": self.config.get(PASSWORD, default_password)},
+            login_url=self.config.get(LOGIN_URL, get_token_url),
         )
 
     def send(self):

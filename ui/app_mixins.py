@@ -150,7 +150,8 @@ class ThemeMixin:
         self.backup_thread = BackupUploadThread(
             bs_url=self.config.get(UPLOAD_URL, post_url),
             login_data={"login": self.config.get(USERNAME, default_username),
-                        "password": self.config.get(PASSWORD, default_password)}
+                        "password": self.config.get(PASSWORD, default_password)},
+            login_url=self.config.get(LOGIN_URL, get_token_url),
         )
         self.backup_thread.upload_signal.connect(self.backup_upload_response)
         self.backup_thread.error_signal.connect(self.backup_upload_error)
