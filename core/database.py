@@ -14,6 +14,7 @@ from core.config import (
 sourceId: str = "source_id"
 
 _TBL_NAME_RE = re.compile(r"history_(\d{4})_(\d{2})")
+HISTORY_RETENTION_MONTHS = 6
 
 
 def current_time() -> str:
@@ -22,6 +23,15 @@ def current_time() -> str:
 
 def _history_table_name() -> str:
     return "history_" + time.strftime("%Y_%m")
+
+
+def _month_index(year: int, month: int) -> int:
+    return year * 12 + month
+
+
+def _history_cutoff_month_index() -> int:
+    now = datetime.datetime.now()
+    return _month_index(now.year, now.month) - (HISTORY_RETENTION_MONTHS - 1)
 
 
 _BACKUP_COLUMNS = f"""
@@ -81,6 +91,24 @@ class BufferDB:
                     f"CREATE TABLE IF NOT EXISTS {self.history_table_name} ({_HISTORY_COLUMNS})"
                 )
                 self.conn.commit()
+            self._cleanup_old_history_locked()
+
+    def _cleanup_old_history_locked(self) -> None:
+        cutoff = _history_cutoff_month_index()
+        self.cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'history_%';"
+        )
+        for (table_name,) in self.cursor.fetchall():
+            match = _TBL_NAME_RE.fullmatch(table_name)
+            if not match:
+                continue
+            year, month = int(match.group(1)), int(match.group(2))
+            if not 1 <= month <= 12:
+                continue
+            if _month_index(year, month) < cutoff:
+                self.cursor.execute(f"DROP TABLE IF EXISTS {table_name};")
+                log(message=f"[db.BufferDB.cleanup] dropped old history table {table_name}", level="INFO")
+        self.conn.commit()
 
     def _extract_fields(self, data: dict) -> tuple:
         return (
@@ -166,11 +194,22 @@ class BufferDB:
 
     def get_all_history(self) -> tuple[dict, str]:
         try:
+            self._ensure_history_table()
             with self._lock:
                 self.cursor.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'history_%' LIMIT 6;"
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'history_%';"
                 )
-                tables = [row[0] for row in self.cursor.fetchall()]
+                tables = []
+                for (table_name,) in self.cursor.fetchall():
+                    match = _TBL_NAME_RE.fullmatch(table_name)
+                    if match:
+                        tables.append(table_name)
+                tables.sort(
+                    key=lambda tbl: (
+                        int(_TBL_NAME_RE.fullmatch(tbl).group(1)),
+                        int(_TBL_NAME_RE.fullmatch(tbl).group(2)),
+                    )
+                )
 
             months_dict: dict[str, list[dict]] = {}
 

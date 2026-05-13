@@ -38,14 +38,24 @@ def main():
 
     # Bitta nusxa tekshiruvi
     from core.config import APP_ID
-    QLocalServer.removeServer(APP_ID)
     socket = QLocalSocket()
     socket.connectToServer(APP_ID)
-    if socket.waitForConnected(200):
+    if socket.waitForConnected(300):
+        # Birinchi nusxaga SetForegroundWindow ishlatish uchun ruxsat beramiz
+        if os.name == "nt":
+            try:
+                ctypes.windll.user32.AllowSetForegroundWindow(0xFFFFFFFF)
+            except Exception:
+                pass
+        socket.write(b"raise")
+        socket.waitForBytesWritten(500)
         socket.disconnectFromServer()
         print("Dastur allaqachon ishlamoqda!")
         sys.exit(0)
+    socket.close()
 
+    # Yangi nusxa — stale server faylini tozalab, server ochamiz
+    QLocalServer.removeServer(APP_ID)
     server = QLocalServer()
     server.listen(APP_ID)
 
@@ -89,6 +99,26 @@ def main():
     window = App()
     splash.finish(window)
     window.show()
+
+    def _raise_window():
+        client = server.nextPendingConnection()
+        if client:
+            client.waitForReadyRead(300)
+            client.readAll()
+            client.disconnectFromServer()
+        window.showNormal()
+        window.raise_()
+        window.activateWindow()
+        if os.name == "nt":
+            try:
+                hwnd = int(window.winId())
+                ctypes.windll.user32.ShowWindow(hwnd, 9)       # SW_RESTORE
+                ctypes.windll.user32.BringWindowToTop(hwnd)
+                ctypes.windll.user32.SetForegroundWindow(hwnd)
+            except Exception:
+                pass
+
+    server.newConnection.connect(_raise_window)
 
     ret = app.exec()
     server.close()
