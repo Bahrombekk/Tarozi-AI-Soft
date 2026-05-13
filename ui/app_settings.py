@@ -162,5 +162,5 @@ class PasswordSettingsMixin:
             self.special_settings_dialog.close()
         except (Exception, ValueError) as err:
             show_message(stl=self.style_name, title="Xatolik",
-                         message=f"[App.save_special_settings] {err}")
+                         message=f"Sozlamalarni saqlashda xatolik yuz berdi.\n{err}")
             log(message=f"[App.save_special_settings] {err}")

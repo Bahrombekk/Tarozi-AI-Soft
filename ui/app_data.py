@@ -153,7 +153,7 @@ class DataMixin:
             self._dual_dialog_open = False
 
     def get_error_message_left(self, msg: str):
-        show_message(stl=self.style_name, message=f"Xatolik sodir bo'ldi. [Chap] \n{msg}")
+        show_message(stl=self.style_name, message=f"Chap kamerada xatolik yuz berdi.\n{msg}")
 
     def get_error_message_right(self, msg: str):
-        show_message(stl=self.style_name, message=f"Xatolik sodir bo'ldi. [O'ng] \n{msg}")
+        show_message(stl=self.style_name, message=f"O'ng kamerada xatolik yuz berdi.\n{msg}")

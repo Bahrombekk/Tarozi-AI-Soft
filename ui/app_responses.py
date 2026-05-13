@@ -72,7 +72,7 @@ class ResponseMixin:
             self.is_timeout = False
             self.send_current_time = self.send_time
             self.hor_right_widget.right_lbl.setText(self.send_current_time)
-            show_message(stl=self.style_name, message=f"Yuborib bo'lmadi. >>> {data}")
+            show_message(stl=self.style_name, message=f"Ma'lumot yuborilmadi. Tafsilotlar: {data}")
 
     def backup_upload_response(self, ans: bool, data: dict):
         if not self.config.get(AUTO, False) and not self.config.get(BTN_DISABLE, False):
@@ -98,14 +98,14 @@ class ResponseMixin:
         else:
             err_msg = data.get('error', 'ERROR')
             show_message(stl=self.style_name,
-                         message=f"Yuborib bo'lmadi. >>> {err_msg} {data}")
+                         message=f"Ma'lumot yuborilmadi. Tafsilotlar: {err_msg} {data}")
 
     def backup_upload_error(self, err: str):
         ttl = self.backup_db.get_total()
         self.last_ttl = ttl
         self.status_widget.archive_count_lbl.setText(str(ttl))
         show_message(stl=self.style_name,
-                     message=f"[BackupUploadThread] Yuborib bo'lmadi. >>> {err}")
+                     message=f"Arxivdagi ma'lumotni yuborish amalga oshmadi. Tafsilotlar: {err}")
         if not self.config.get(AUTO, False):
             self.left_widget.frame_lbl.btn.setDisabled(False)
             self.right_widget.frame_lbl.btn.setDisabled(False)

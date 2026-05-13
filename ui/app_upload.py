@@ -83,10 +83,10 @@ class UploadMixin:
                 self.upload_left = True
                 self.send()
             else:
-                show_message(stl=self.style_name, message="Kamera yoqilmagan")
+                show_message(stl=self.style_name, message="Kamera ishga tushirilmagan.")
         else:
             show_message(stl=self.style_name,
-                         message=f"O'lchash uchun minimal og'irlik {min_send_kg:,} kg")
+                         message=f"O'lchash uchun minimal og'irlik: {min_send_kg:,} kg.")
 
     def upload_handle_data_right(self):
         if max(self.last_scale_weight) > min_send_kg:
@@ -109,10 +109,10 @@ class UploadMixin:
                 self.upload_right = True
                 self.send()
             else:
-                show_message(stl=self.style_name, message="Kamera yoqilmagan")
+                show_message(stl=self.style_name, message="Kamera ishga tushirilmagan.")
         else:
             show_message(stl=self.style_name,
-                         message=f"O'lchash uchun minimal og'irlik {min_send_kg:,} kg")
+                         message=f"O'lchash uchun minimal og'irlik: {min_send_kg:,} kg.")
 
     def _build_upload_thread(self, img, img2, img_num) -> UploadThread:
         return UploadThread(
@@ -130,7 +130,7 @@ class UploadMixin:
                 self.right_widget.frame_lbl.btn.setDisabled(True)
             if max(self.last_scale_weight) <= min_send_kg:
                 show_message(stl=self.style_name,
-                             message=f"O'lchash uchun minimal og'irlik {min_send_kg:,} kg")
+                             message=f"O'lchash uchun minimal og'irlik: {min_send_kg:,} kg.")
                 if not self.config.get(AUTO, False):
                     self.left_widget.frame_lbl.btn.setDisabled(False)
                     self.right_widget.frame_lbl.btn.setDisabled(False)

@@ -114,7 +114,7 @@ class ThemeMixin:
             if isinstance(vt, (VideoThread, AutoVideoThread)):
                 if vt.running:
                     show_message(stl=self.style_name, title="Xabar",
-                                 message="Avval videoni to'xtating")
+                                 message="Avval videoni to'xtating.")
                     return
         auto = (ans == 2)
         self.left_widget.frame_lbl.btn.setDisabled(auto)
@@ -175,5 +175,5 @@ class ThemeMixin:
             self.status_widget.status_btn.setIcon(success_icon)
         else:
             self.status_widget.status_btn.setIcon(fail_icon)
-            show_message(stl=self.style_name, message=f"Login qilib bo'lmadi. \n{data}")
+            show_message(stl=self.style_name, message=f"Tizimga kirish amalga oshmadi.\n{data}")
         self.settings_widget.save_btn.setDisabled(False)

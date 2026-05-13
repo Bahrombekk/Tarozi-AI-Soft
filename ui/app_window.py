@@ -25,7 +25,7 @@ class WindowMixin:
     def closeEvent(self, a0):
         try:
             ans = ask_message(stl=self.style_name, title="Chiqish",
-                              message="Dasturdan chiqishni xohlaysizmi?")
+                              message="Dasturdan chiqishni tasdiqlaysizmi?")
             if ans == QMessageBox.StandardButton.Yes:
                 def _stop(t):
                     if t is None:

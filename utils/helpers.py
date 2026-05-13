@@ -110,9 +110,13 @@ def is_process_elevated() -> bool:
 
 # ---------- UI dialogs ----------
 
-def ask_message(stl: str, title: str = "Tanlang", message: str = "Tanlang") -> int:
+def ask_message(
+        stl: str,
+        title: str = "Tasdiqlash",
+        message: str = "Amalni tasdiqlang",
+        icon: QMessageBox.Icon = QMessageBox.Icon.Question) -> int:
     msb = QMessageBox()
-    msb.setIcon(QMessageBox.Icon.Question)
+    msb.setIcon(icon)
     msb.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
     msb.setMinimumWidth(250)
     msb.setMinimumHeight(200)
@@ -130,8 +134,8 @@ def ask_message(stl: str, title: str = "Tanlang", message: str = "Tanlang") -> i
     """
     yes_button = msb.button(QMessageBox.StandardButton.Yes)
     no_button = msb.button(QMessageBox.StandardButton.No)
-    yes_button.setText("Ha")
-    no_button.setText("Yo'q")
+    yes_button.setText("Tasdiqlash")
+    no_button.setText("Bekor qilish")
     yes_button.setObjectName("yes_no_btn")
     no_button.setObjectName("yes_no_btn")
     yes_button.setStyleSheet(btn_style)
@@ -175,7 +179,7 @@ def show_message(stl: str, message: str = "Xabar", title: str = "Xabar") -> int:
         }}
     """
     yes_button = msb.button(QMessageBox.StandardButton.Yes)
-    yes_button.setText("Ha")
+    yes_button.setText("Yopish")
     yes_button.setObjectName("yes_no_btn")
     yes_button.setStyleSheet(btn_style)
     if isinstance(window_icon, QIcon):

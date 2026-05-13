@@ -35,7 +35,7 @@ class ProgressBar(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.layout: QVBoxLayout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
-        self.lbl: QLabel = QLabel("Iltimos kutib turing.\n Tasdiqlanmoqda...")
+        self.lbl: QLabel = QLabel("Iltimos, kuting.\nMa'lumot tasdiqlanmoqda...")
         self.lbl.setObjectName("side_lbl")
         self.lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
         self.progress: QProgressBar = QProgressBar()
@@ -211,13 +211,13 @@ class WagonChoiceDialog(QDialog):
         root.setSpacing(20)
 
         # Sarlavha
-        title = QLabel("Qaysi vagon raqami to'g'ri?")
+        title = QLabel("To'g'ri vagon raqamini tanlang")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setFont(QFont("Poppins", 16, QFont.Weight.Bold))
         title.setStyleSheet(f"color: {txt};")
         root.addWidget(title)
 
-        subtitle = QLabel("Kamera 2 ta to'liq raqam aniqladi. To'g'risini tanlang.")
+        subtitle = QLabel("Kamera ikkita to'liq raqam aniqladi. Iltimos, to'g'ri raqamni tanlang.")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle.setStyleSheet(f"color: {txt2}; font-size: 13px;")
         root.addWidget(subtitle)
@@ -346,7 +346,7 @@ class RepeatWagonDialog(QDialog):
         super().__init__()
         from ui.theme import palettes, BG_COLOR, BG_COLOR2, BG_COLOR3, TEXT_COLOR, TEXT_COLOR2, BORDER_COLOR
 
-        self.setWindowTitle("Diqqat")
+        self.setWindowTitle("Qayta tortishni tasdiqlash")
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         if window_icon:
@@ -381,7 +381,7 @@ class RepeatWagonDialog(QDialog):
         banner_lt.addWidget(warn_lbl)
         banner_lt.addSpacing(10)
 
-        ban_text = QLabel("Bu vagon bugun allaqachon tortilgan!")
+        ban_text = QLabel("Ushbu vagon bugun ro'yxatga olingan.")
         ban_text.setFont(QFont("Poppins", 14, QFont.Weight.Bold))
         ban_text.setStyleSheet("color: #fff; background: transparent;")
         banner_lt.addWidget(ban_text)
@@ -449,25 +449,27 @@ class RepeatWagonDialog(QDialog):
         except Exception:
             weight_str = f"{weight_kg} kg" if weight_kg else "—"
 
-        info_lt.addLayout(_info_row("images/clock.png", "Tortilgan vaqt:", time_str))
+        info_lt.addLayout(_info_row("images/clock.png", "Avvalgi tortish vaqti:", time_str))
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
         sep.setStyleSheet(f"border: none; background: {brd}; max-height: 1px;")
         info_lt.addWidget(sep)
 
-        info_lt.addLayout(_info_row("images/scale.svg", "O'lchov natijasi:", weight_str))
+        info_lt.addLayout(_info_row("images/scale.svg", "Avvalgi og'irlik:", weight_str))
         body_lt.addWidget(info_card)
 
         # Savol + izoh ─────────────────────────────────────────────────
-        q_lbl = QLabel("Qayta tortishni tasdiqlaysizmi?")
+        q_lbl = QLabel("Ushbu vagonni qayta tortishni davom ettirasizmi?")
         q_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         q_lbl.setFont(QFont("Poppins", 15, QFont.Weight.Bold))
         q_lbl.setStyleSheet(f"color: {txt};")
         body_lt.addWidget(q_lbl)
 
-        hint_lbl = QLabel("60 soniya tugagach  \"Ha, tasdiqlash\"  tugmasi faollashadi")
+        hint_lbl = QLabel("Tasdiqlash tugmasi 60 soniyadan so'ng faollashadi.")
         hint_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hint_lbl.setWordWrap(True)
+        hint_lbl.setMaximumWidth(500)
         hint_lbl.setFont(QFont("Poppins", 12))
         hint_lbl.setStyleSheet(f"color: {txt2};")
         body_lt.addWidget(hint_lbl)
@@ -477,7 +479,7 @@ class RepeatWagonDialog(QDialog):
         body_lt.addWidget(self._ring, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         # Tugmalar — to'liq kenglik ──────────────────────────────────
-        self._yes_btn = QPushButton("Ha, tasdiqlash  —  60s")
+        self._yes_btn = QPushButton("Tasdiqlash - 60s")
         self._yes_btn.setMinimumHeight(54)
         self._yes_btn.setFont(QFont("Poppins", 14, QFont.Weight.Bold))
         self._yes_btn.setCursor(Qt.CursorShape.ForbiddenCursor)
@@ -503,7 +505,7 @@ class RepeatWagonDialog(QDialog):
         self._yes_btn.clicked.connect(self.accept)
         body_lt.addWidget(self._yes_btn)
 
-        no_btn = QPushButton("Yo'q, bekor qilish")
+        no_btn = QPushButton("Bekor qilish")
         no_btn.setMinimumHeight(46)
         no_btn.setFont(QFont("Poppins", 13))
         no_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -537,9 +539,9 @@ class RepeatWagonDialog(QDialog):
             self._timer.stop()
             self._yes_btn.setEnabled(True)
             self._yes_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self._yes_btn.setText("Ha, tasdiqlash")
+            self._yes_btn.setText("Tasdiqlash")
         else:
-            self._yes_btn.setText(f"Ha, tasdiqlash  —  {remaining}s")
+            self._yes_btn.setText(f"Tasdiqlash - {remaining}s")
 
     def closeEvent(self, event):
         self._timer.stop()

@@ -608,7 +608,7 @@ class App(QMainWindow):
             show_message(
                 stl=self.style_name,
                 title="Xatolik",
-                message=f"[MainApp.check_password] {err}"
+                message=f"Parolni tekshirishda xatolik yuz berdi.\n{err}"
             )
 
     def restore_state(self):
@@ -634,7 +634,7 @@ class App(QMainWindow):
                 show_message(
                     stl=self.style_name,
                     title="Xabar",
-                    message=f"Avval videoni to'xtating [Chap]"
+                    message="Avval chap kamera videosini to'xtating."
                 )
                 self.left_widget.switch.start_transition(2 if self.config.get(AUTO, False) else 0)
                 return
@@ -643,7 +643,7 @@ class App(QMainWindow):
                 show_message(
                     stl=self.style_name,
                     title="Xabar",
-                    message=f"Avval videoni to'xtating [O'ng]"
+                    message="Avval o'ng kamera videosini to'xtating."
                 )
                 self.right_widget.switch.start_transition(2 if self.config.get(AUTO, False) else 0)
                 return
@@ -704,7 +704,7 @@ class App(QMainWindow):
                     show_message(
                         stl=self.style_name,
                         title="Xabar",
-                        message="Avval videoni to'xtating [Chap]"
+                        message="Avval chap kamera videosini to'xtating."
                     )
                     return
 
@@ -791,7 +791,7 @@ class App(QMainWindow):
                     show_message(
                         stl=self.style_name,
                         title="Xabar",
-                        message="Avval videoni to'xtating [O'ng]"
+                        message="Avval o'ng kamera videosini to'xtating."
                     )
                     return
 
@@ -1116,7 +1116,7 @@ class App(QMainWindow):
             show_message(
                 stl=self.style_name,
                 title="Xatolik",
-                message=f"[MainApp.save_special_settings] {err}"
+                message=f"Sozlamalarni saqlashda xatolik yuz berdi.\n{err}"
             )
             log(message=f"[MainApp.save_special_settings] {err}")
 
@@ -1131,7 +1131,7 @@ class App(QMainWindow):
             if self.video_thread_left.running:
                 show_message(
                     stl=self.style_name,
-                    message="Saqlashdan avval videoni to'xtating. [Chap]"
+                    message="Saqlashdan avval chap kamera videosini to'xtating."
                 )
             else:
                 self.save_cam_url_left()
@@ -1141,7 +1141,7 @@ class App(QMainWindow):
             if self.video_thread_right.running:
                 show_message(
                     stl=self.style_name,
-                    message="Saqlashdan avval videoni to'xtating. [O'ng]"
+                    message="Saqlashdan avval o'ng kamera videosini to'xtating."
                 )
             else:
                 self.save_cam_url_right()
@@ -1171,7 +1171,7 @@ class App(QMainWindow):
                 self.special_settings_dialog.password_widget.lbl.setText("Parol <font color='#ef4444'>✗</font>")
             show_message(
                 stl=self.style_name,
-                message=f"Login qilib bo'lmadi. \n{data}"
+                message=f"Tizimga kirish amalga oshmadi.\n{data}"
             )
         self.settings_widget.save_btn.setDisabled(False)
 
@@ -1247,14 +1247,14 @@ class App(QMainWindow):
                     show_message(
                         stl=self.style_name,
                         title="Xabar",
-                        message="Saqlashdan avval videoni to'xtating. [Chap]"
+                        message="Saqlashdan avval chap kamera videosini to'xtating."
                     )
         else:
             self.settings_widget.left_cam_widget.lbl.setText("Chap Kamera <font color='#ef4444'>✗</font>")
             show_message(
                 stl=self.style_name,
                 title="Xabar",
-                message="Kamera bilan aloqa yo'q. [Chap]"
+                message="Chap kamera bilan aloqa mavjud emas."
             )
             self.left_widget.switch.setDisabled(btn_disabled)
         self.settings_widget.left_cam_widget.edit.setDisabled(False)
@@ -1278,14 +1278,14 @@ class App(QMainWindow):
                     show_message(
                         stl=self.style_name,
                         title="Xabar",
-                        message="Saqlashdan avval videoni to'xtating. [O'ng]"
+                        message="Saqlashdan avval o'ng kamera videosini to'xtating."
                     )
         else:
             self.settings_widget.right_cam_widget.lbl.setText("O'ng Kamera <font color='#ef4444'>✗</font>")
             show_message(
                 stl=self.style_name,
                 title="Xabar",
-                message="Kamera bilan aloqa yo'q. [O'ng]"
+                message="O'ng kamera bilan aloqa mavjud emas."
             )
             self.right_widget.switch.setDisabled(btn_disabled)
         self.settings_widget.right_cam_widget.edit.setDisabled(False)
@@ -1402,7 +1402,7 @@ class App(QMainWindow):
             show_message(
                 stl=self.style_name,
                 title="Xatolik",
-                message=f"[MainApp.start_video_left] {err}"
+                message=f"Chap kamerani ishga tushirishda xatolik yuz berdi.\n{err}"
             )
 
     def start_video_right(self):
@@ -1515,7 +1515,7 @@ class App(QMainWindow):
             show_message(
                 stl=self.style_name,
                 title="Xatolik",
-                message=f"[MainApp.start_video_right] {err}"
+                message=f"O'ng kamerani ishga tushirishda xatolik yuz berdi.\n{err}"
             )
 
     def inner_left(self, ans: bool):
@@ -1864,17 +1864,17 @@ class App(QMainWindow):
                 else:
                     show_message(
                         stl=self.style_name,
-                        message="Kamera yoqilmagan"
+                        message="Kamera ishga tushirilmagan."
                     )
             else:
                 show_message(
                     stl=self.style_name,
-                    message="Kamera yoqilmagan"
+                    message="Kamera ishga tushirilmagan."
                 )
         else:
             show_message(
                 stl=self.style_name,
-                message=f"O'lchash uchun minimal og'irlik {min_send_kg:,} kg"
+                message=f"O'lchash uchun minimal og'irlik: {min_send_kg:,} kg."
             )
 
     def upload_handle_data_right(self):
@@ -1913,17 +1913,17 @@ class App(QMainWindow):
                 else:
                     show_message(
                         stl=self.style_name,
-                        message="Kamera yoqilmagan"
+                        message="Kamera ishga tushirilmagan."
                     )
             else:
                 show_message(
                     stl=self.style_name,
-                    message="Kamera yoqilmagan"
+                    message="Kamera ishga tushirilmagan."
                 )
         else:
             show_message(
                 stl=self.style_name,
-                message=f"O'lchash uchun minimal og'irlik {min_send_kg:,} kg"
+                message=f"O'lchash uchun minimal og'irlik: {min_send_kg:,} kg."
             )
 
     def get_wagon_numer_left(self) -> str:
@@ -2000,7 +2000,7 @@ class App(QMainWindow):
             log(message=f"[MainApp.scale_weight] {err}")
             show_message(
                 stl=self.style_name,
-                message=f"[MainApp.scale_weight] Xatolik: {err}"
+                message=f"Tarozi ma'lumotini o'qishda xatolik yuz berdi.\n{err}"
             )
 
     def send(self):
@@ -2038,8 +2038,13 @@ class App(QMainWindow):
                 if self.sending_data.scaleNumber == 0 and not self.config.get(SCALE_DISABLE, False):
                     ans = ask_message(
                         stl=self.style_name,
-                        title="Diqqat",
-                        message="Tarozi og'irligi 0 kg ko'rsatmoqda.\nTarozi ulanganmi? Baribir yuborishni davom ettirasizmi?"
+                        title="Tortishni tasdiqlash",
+                        message=(
+                            "Tarozi 0 kg qiymat ko'rsatmoqda.\n"
+                            "Iltimos, tarozi ulanganini va vagon to'liq tarozida turganini tekshiring.\n"
+                            "Shunga qaramay tortishni davom ettirasizmi?"
+                        ),
+                        icon=QMessageBox.Icon.Warning
                     )
                     if ans != QMessageBox.StandardButton.Yes:
                         if not self.config.get(AUTO, False):
@@ -2070,7 +2075,7 @@ class App(QMainWindow):
             else:
                 show_message(
                     stl=self.style_name,
-                    message=f"[MainApp.send] O'lchash uchun minimal og'irlik {min_send_kg:,} kg"
+                    message=f"O'lchash uchun minimal og'irlik: {min_send_kg:,} kg."
                 )
                 if not self.config.get(AUTO, False):
                     self.left_widget.frame_lbl.btn.setDisabled(False)
@@ -2181,7 +2186,7 @@ class App(QMainWindow):
             log(message=f"[MainApp.get_upload_response] Yuborib bo'lmadi. >>> {data}")
             show_message(
                 stl=self.style_name,
-                message="Yuborib bo'lmadi. Ma'lumot saqlandi, 30 soniyadan keyin qayta uriniladi."
+                message="Ma'lumot yuborilmadi. Ma'lumot saqlandi va 30 soniyadan so'ng qayta yuborishga uriniladi."
             )
             QTimer.singleShot(30_000, self._retry_upload)
 
@@ -2218,7 +2223,7 @@ class App(QMainWindow):
             log(message=f"[MainApp.backup_upload_response] Yuborib bo'lmadi. >>> {data.get('error', 'ERROR')} {data}")
             show_message(
                 stl=self.style_name,
-                message=f"Yuborib bo'lmadi. >>> {data.get('error', 'ERROR')} {data}"
+                message=f"Ma'lumot yuborilmadi. Tafsilotlar: {data.get('error', 'ERROR')} {data}"
             )
 
     def backup_upload_error(self, err: str):
@@ -2228,7 +2233,7 @@ class App(QMainWindow):
         log(message=f"[BackupUploadThread.run] Yuborib bo'lmadi. >>> {err}")
         show_message(
             stl=self.style_name,
-            message=f"[BackupUploadThread.run] Yuborib bo'lmadi. >>> {err}"
+            message=f"Arxivdagi ma'lumotni yuborish amalga oshmadi. Tafsilotlar: {err}"
         )
         if not self.config.get(AUTO, False):
             self.left_widget.frame_lbl.btn.setDisabled(False)
@@ -2237,13 +2242,13 @@ class App(QMainWindow):
     def get_error_message_left(self, msg: str):
         show_message(
             stl=self.style_name,
-            message=f"Xatolik sodir bo'ldi. [Chap] \n{msg}"
+            message=f"Chap kamerada xatolik yuz berdi.\n{msg}"
         )
 
     def get_error_message_right(self, msg: str):
         show_message(
             stl=self.style_name,
-            message=f"Xatolik sodir bo'ldi. [O'ng] \n{msg}"
+            message=f"O'ng kamerada xatolik yuz berdi.\n{msg}"
         )
 
     def closeEvent(self, a0):
@@ -2251,7 +2256,7 @@ class App(QMainWindow):
             ans: int = ask_message(
                 stl=self.style_name,
                 title="Chiqish",
-                message="Dasturdan chiqishni xohlaysizmi?"
+                message="Dasturdan chiqishni tasdiqlaysizmi?"
             )
             if ans == QMessageBox.StandardButton.Yes:
                 def _stop(t):

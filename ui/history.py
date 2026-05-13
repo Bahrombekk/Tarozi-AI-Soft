@@ -302,7 +302,7 @@ class HistoryWidget(QWidget):
                     show_message(
                         stl=self.style_name,
                         title="Xatolik",
-                        message=f"[HistoryWidget.backup_db.insert_history] {er}"
+                        message=f"Tarix ma'lumotini saqlashda xatolik yuz berdi.\n{er}"
                     )
                 elif real_id:
                     # DB tomonidan berilgan haqiqiy ID ni ishlatamiz

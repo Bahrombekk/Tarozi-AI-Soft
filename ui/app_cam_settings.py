@@ -107,7 +107,7 @@ class CamSettingsMixin:
                 self.left_widget.switch.start_transition(2)
         else:
             self.settings_widget.left_cam_widget.lbl.setText("Chap Kamera \u274c")
-            show_message(stl=self.style_name, message="Kamera bilan aloqa yo'q. [Chap]")
+            show_message(stl=self.style_name, message="Chap kamera bilan aloqa mavjud emas.")
             self.left_widget.switch.setDisabled(True)
         self.settings_widget.left_cam_widget.edit.setDisabled(False)
         self.settings_widget.save_btn.setDisabled(False)
@@ -123,7 +123,7 @@ class CamSettingsMixin:
                 self.right_widget.switch.start_transition(2)
         else:
             self.settings_widget.right_cam_widget.lbl.setText("O'ng Kamera \u274c")
-            show_message(stl=self.style_name, message="Kamera bilan aloqa yo'q. [O'ng]")
+            show_message(stl=self.style_name, message="O'ng kamera bilan aloqa mavjud emas.")
             self.right_widget.switch.setDisabled(True)
         self.settings_widget.right_cam_widget.edit.setDisabled(False)
         self.settings_widget.save_btn.setDisabled(False)
@@ -134,7 +134,7 @@ class CamSettingsMixin:
                 event.modifiers() & Qt_.KeyboardModifier.ControlModifier and
                 event.modifiers() & Qt_.KeyboardModifier.ShiftModifier):
             if self.video_thread_left and self.video_thread_left.running:
-                show_message(stl=self.style_name, message="Avval videoni to'xtating [Chap]")
+                show_message(stl=self.style_name, message="Avval chap kamera videosini to'xtating.")
                 return
             self.apply_blur(enable=True)
             self._open_hidden_settings(side="left")
@@ -145,7 +145,7 @@ class CamSettingsMixin:
                 event.modifiers() & Qt_.KeyboardModifier.ControlModifier and
                 event.modifiers() & Qt_.KeyboardModifier.ShiftModifier):
             if self.video_thread_right and self.video_thread_right.running:
-                show_message(stl=self.style_name, message="Avval videoni to'xtating [O'ng]")
+                show_message(stl=self.style_name, message="Avval o'ng kamera videosini to'xtating.")
                 return
             self.apply_blur(enable=True)
             self._open_hidden_settings(side="right")

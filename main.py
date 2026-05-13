@@ -27,7 +27,7 @@ def _show_admin_warning():
     mb = QMessageBox()
     mb.setIcon(QMessageBox.Icon.Warning)
     mb.setWindowTitle("Ogohlantirish")
-    mb.setText("Dasturni administrator huquqlari bilan oching!!!")
+    mb.setText("Dasturni administrator huquqlari bilan ishga tushiring.")
     mb.setStandardButtons(QMessageBox.StandardButton.Ok)
     mb.exec()
 

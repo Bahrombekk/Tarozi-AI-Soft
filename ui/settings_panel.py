@@ -72,7 +72,7 @@ class EditLabelWidget(QLabel):
             self.lbl.setContentsMargins(0, 3, 0, 3)
             self.edit: ClickableQLineEdit | QLineEdit = ClickableQLineEdit(ty=ed)
             self.edit.setObjectName("settings_edit")
-            self.edit.setText("Qo'shimcha sozlamalarga kirish uchun parol kerak bo'ladi")
+            self.edit.setText("Qo'shimcha sozlamalarga kirish uchun parol talab qilinadi")
             self.edit.setDisabled(True)
             self.edit.setContentsMargins(0, 0, 0, 0)
             v1_lt.addWidget(self.lbl)
@@ -165,7 +165,7 @@ class SettingsWidget(QWidget):
             h=int(SCREEN_HEIGHT * 0.065),
         )
         self.auto_switch.lbl.setText("Dasturni avtomatlashtirish")
-        self.auto_switch.edit.setText("Sozlama yoqilganda dastur avtomatik ish bajaradi")
+        self.auto_switch.edit.setText("Sozlama yoqilganda dastur avtomatik rejimda ishlaydi")
 
         h_lt.addWidget(self.settings_lbl, alignment=Qt.AlignmentFlag.AlignLeft)
         h_lt.addWidget(self.save_btn, alignment=Qt.AlignmentFlag.AlignRight)
@@ -200,7 +200,7 @@ class SettingsWidget(QWidget):
             h=int(SCREEN_HEIGHT * 0.065),
         )
         self.theme_widget.lbl.setText("Mavzu")
-        self.theme_widget.edit.setText("Tunggi rejim")
+        self.theme_widget.edit.setText("Tungi rejim")
         self.theme_widget.edit.setReadOnly(True)
 
         self.additional_widget: EditLabelWidget = EditLabelWidget(
@@ -462,11 +462,11 @@ class HiddenSettingsWidget(QDialog):
         self.frame_count_distance.help_col2_lbl.setText(f"{min_distance} - {max_distance}")
 
         self.line.lbl.setText("Chiziq")
-        self.line.edit.setText("Kameradagi chiqizlarni ko'rsatish")
+        self.line.edit.setText("Kameradagi chiziqlarni ko'rsatish")
         self.line.edit.setReadOnly(True)
 
         self.half.lbl.setText("Yarim aniqlik")
-        self.half.edit.setText("Sun'iy intellekt orqali aniqlikni kuchaytirish")
+        self.half.edit.setText("Sun'iy intellekt aniqligini oshirish")
         self.half.edit.setReadOnly(True)
 
         self.fps_.lbl.setText("FPS")
@@ -542,7 +542,7 @@ class SpecialSettingsDialog(QDialog):
             style_name=self.style_name,
             ed=""
         )
-        self.login_widget.lbl.setText("Login")
+        self.login_widget.lbl.setText("Foydalanuvchi nomi")
         self.login_widget.setFixedWidth(wx)
         self.password_widget: EditLabelWidget = EditLabelWidget(
             style_name=self.style_name,
@@ -576,7 +576,7 @@ class SpecialSettingsDialog(QDialog):
         self.urls.col1.lbl.setText("Login URL")
         self.urls.help_col1_lbl.setText("https://<DOMAIN>/api/auth/login")
 
-        self.urls.col2.lbl.setText("Post URL")
+        self.urls.col2.lbl.setText("Yuborish URL")
         self.urls.help_col2_lbl.setText("https://<DOMAIN>/api/post/url")
 
         self.scale_view.lbl.setText("Tarozi raqami")
@@ -584,11 +584,11 @@ class SpecialSettingsDialog(QDialog):
         self.scale_view.edit.setReadOnly(True)
 
         self.btn_disable.lbl.setText("Tasdiqlash tugmasi")
-        self.btn_disable.edit.setText("Tasdiqlash tugmasini o'chirib qo'yish")
+        self.btn_disable.edit.setText("Tasdiqlash tugmasini faol holatdan chiqarish")
         self.btn_disable.edit.setReadOnly(True)
 
         self.scale_disable.lbl.setText("COM Port (tarozi)")
-        self.scale_disable.edit.setText("COM Portni o'chirib qo'yish (tarozi ulanmaydi)")
+        self.scale_disable.edit.setText("COM portni faol holatdan chiqarish (tarozi ulanmaydi)")
         self.scale_disable.edit.setReadOnly(True)
 
         self.save_btn: QPushButton = QPushButton("Saqlash")
