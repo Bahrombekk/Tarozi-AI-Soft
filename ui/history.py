@@ -9,7 +9,8 @@ import numpy as np
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QPixmap, QColor, QBrush
 from PyQt6.QtWidgets import (QWidget, QLabel, QVBoxLayout, QHBoxLayout,
-                              QPushButton, QTabWidget, QTreeWidget, QTreeWidgetItem)
+                              QPushButton, QTabWidget, QTreeWidget, QTreeWidgetItem,
+                              QLineEdit, QFrame)
 from ui.styles import get_styles
 from ui.dialogs import ImageDialog, ImageDialog2
 from utils.image import cv2_to_qpixmap, qpixmap_to_ndarray
@@ -38,8 +39,34 @@ class HistoryWidget(QWidget):
         self.image_dialog: ImageDialog2 | None = None
 
         self.lt: QVBoxLayout = QVBoxLayout()
+
+        # ── Qidiruv satri ────────────────────────────────────────────
+        search_row = QHBoxLayout()
+        search_row.setContentsMargins(8, 6, 8, 4)
+        search_row.setSpacing(8)
+
+        search_lbl = QLabel()
+        search_pix = QPixmap("images/search.svg").scaled(20, 20, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        search_lbl.setPixmap(search_pix)
+        search_lbl.setFixedWidth(24)
+        search_row.addWidget(search_lbl)
+
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText("Vagon raqami bo'yicha qidirish...")
+        self.search_edit.setObjectName("search_edit")
+        self.search_edit.setClearButtonEnabled(True)
+        self.search_edit.textChanged.connect(self._apply_filter)
+        search_row.addWidget(self.search_edit)
+
+        self.lt.addLayout(search_row)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        self.lt.addWidget(sep)
+
         self.tabs: QTabWidget = QTabWidget()
         self.tabs.setObjectName("tab_widget")
+        self.tabs.currentChanged.connect(lambda _: self._apply_filter(self.search_edit.text()))
         self.lt.addWidget(self.tabs)
 
         self.backup_db: BufferDB = BufferDB()
@@ -423,6 +450,18 @@ class HistoryWidget(QWidget):
         for tree in self.trees_by_month.values():
             for i, w in enumerate(self.widths):
                 tree.setColumnWidth(i, w)
+
+    def _apply_filter(self, text: str) -> None:
+        query = text.strip().lower()
+        tree = self.current_tree()
+        if tree is None:
+            return
+        for i in range(tree.topLevelItemCount()):
+            item = tree.topLevelItem(i)
+            if item is None:
+                continue
+            wagon_num = item.text(1).lower()
+            item.setHidden(bool(query) and query not in wagon_num)
 
     def change_style(self, style_name: str) -> None:
         self.style_name: str = style_name

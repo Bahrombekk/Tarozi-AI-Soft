@@ -186,9 +186,12 @@ class WagonChoiceDialog(QDialog):
         self.setWindowTitle("Vagon raqamini tanlang")
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        # X tugmasi va Escape orqali yopishni o'chirish
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowCloseButtonHint)
         if window_icon:
             self.setWindowIcon(window_icon)
         self.selected: dict | None = None
+        self._user_closed: bool = False
 
         p = palettes[style_name]
         bg   = p[BG_COLOR]
@@ -257,12 +260,28 @@ class WagonChoiceDialog(QDialog):
                 background: {p['BG_COLOR3']};
             }}
         """)
-        cancel_btn.clicked.connect(self.reject)
+        cancel_btn.clicked.connect(self._on_cancel)
         root.addWidget(cancel_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
+    def _on_cancel(self) -> None:
+        self._user_closed = True
+        self.reject()
+
     def _choose(self, candidate: dict) -> None:
+        self._user_closed = True
         self.selected = candidate
         self.accept()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            return  # Escape bilan yopilmaydi
+        super().keyPressEvent(event)
+
+    def closeEvent(self, event):
+        if self._user_closed:
+            event.accept()
+        else:
+            event.ignore()  # X tugmasi orqali yopilmaydi
 
 
 class _RingWidget(QWidget):
@@ -404,11 +423,13 @@ class RepeatWagonDialog(QDialog):
         info_lt.setContentsMargins(18, 14, 18, 14)
         info_lt.setSpacing(10)
 
-        def _info_row(icon: str, label: str, value: str):
+        def _info_row(icon_path: str, label: str, value: str):
             row = QHBoxLayout()
-            ic = QLabel(icon)
-            ic.setFont(QFont("Poppins", 15))
+            ic = QLabel()
+            pix = QPixmap(icon_path).scaled(22, 22, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            ic.setPixmap(pix)
             ic.setFixedWidth(28)
+            ic.setAlignment(Qt.AlignmentFlag.AlignCenter)
             ic.setStyleSheet("background: transparent; border: none;")
             lb = QLabel(label)
             lb.setFont(QFont("Poppins", 13))
@@ -428,14 +449,14 @@ class RepeatWagonDialog(QDialog):
         except Exception:
             weight_str = f"{weight_kg} kg" if weight_kg else "—"
 
-        info_lt.addLayout(_info_row("🕐", "Tortilgan vaqt:", time_str))
+        info_lt.addLayout(_info_row("images/clock.png", "Tortilgan vaqt:", time_str))
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
         sep.setStyleSheet(f"border: none; background: {brd}; max-height: 1px;")
         info_lt.addWidget(sep)
 
-        info_lt.addLayout(_info_row("⚖", "O'lchov natijasi:", weight_str))
+        info_lt.addLayout(_info_row("images/scale.svg", "O'lchov natijasi:", weight_str))
         body_lt.addWidget(info_card)
 
         # Savol + izoh ─────────────────────────────────────────────────

@@ -62,16 +62,16 @@ class VideoThread(BaseVideoThread):
                     now = time.time()
                     self.fps_signal.emit(f"FPS: {1 / max(0.01, now - start_time):.1f}")
                     start_time = now
-                candidates = data.pop("candidates", None)
-                if candidates:
-                    self.cnt += 1
-                    if self.cnt % self.max_count == 0:
-                        self.cnt = 1
-                        self.dual_signal.emit(candidates)
-                elif data.get(wagonNumber, identifier * num_count).count(identifier) <= 3:
-                    self.cnt += 1
-                    if self.cnt % self.max_count == 0:
-                        self.cnt = 1
+                is_valid = (data.get(wagonNumber, identifier * num_count).count(identifier) <= 3
+                            or data.get("candidates"))
+                self.cnt += 1
+                if self.cnt % self.max_count == 0:
+                    self.cnt = 1
+                    if is_valid:
+                        self._had_detection = True
+                        self.data_signal.emit(data)
+                    elif getattr(self, "_had_detection", False):
+                        self._had_detection = False
                         self.data_signal.emit(data)
             except Exception as err:
                 log(message=f"[VideoThread._inference_loop] {err}")
@@ -107,8 +107,9 @@ class VideoThread(BaseVideoThread):
                             color = (0, 0, 255) if out else (0, 255, 0)
                             cmds.append(("rect", (x_min, y_min), (x_max, y_max), color, 4))
                             continue
-                        if (x_min > 5 and x_max < img_w - 5 and y_min > 5 and y_max < img_h - 5
-                                and conf >= self.d_conf and x_max - x_min > 100):
+                        visible_w = min(img_w, x_max) - max(0, x_min)
+                        if (conf >= self.d_conf and y_min > 5 and y_max < img_h - 5
+                                and visible_w > 100):
                             x1 = max(0, x_min - offset - 4)
                             y1 = max(0, y_min - offset - 4)
                             x2 = min(img_w, x_max + offset + 4)
@@ -132,9 +133,11 @@ class VideoThread(BaseVideoThread):
                                   if c[wagonNumber].count(identifier) == 0
                                   and len(c[wagonNumber]) == num_count]
                     best = coords[0]
+
                     if len(full_valid) >= 2:
                         best = dict(best)
                         best["candidates"] = full_valid
+
                     return cmds, best
             return cmds, {wagonAttachId: img}
         except Exception as err:

@@ -573,11 +573,11 @@ class App(QMainWindow):
                 self.special_settings_dialog.password_widget.edit.setDisabled(False)
 
                 if self.last_login_status:
-                    self.special_settings_dialog.login_widget.lbl.setText("Login ✅")
-                    self.special_settings_dialog.password_widget.lbl.setText("Parol ✅")
+                    self.special_settings_dialog.login_widget.lbl.setText("Login <font color='#22c55e'>✓</font>")
+                    self.special_settings_dialog.password_widget.lbl.setText("Parol <font color='#22c55e'>✓</font>")
                 else:
-                    self.special_settings_dialog.login_widget.lbl.setText("Login ❌")
-                    self.special_settings_dialog.password_widget.lbl.setText("Parol ❌")
+                    self.special_settings_dialog.login_widget.lbl.setText("Login <font color='#ef4444'>✗</font>")
+                    self.special_settings_dialog.password_widget.lbl.setText("Parol <font color='#ef4444'>✗</font>")
 
                 self.special_settings_dialog.save_btn.clicked.connect(
                     lambda: self.save_special_settings(
@@ -672,6 +672,12 @@ class App(QMainWindow):
         self.status_widget.archive_count_lbl.setText(str(ttl))
         if ans:
             if ttl > 0:
+                self.upload_backup_data()
+
+    def _retry_upload(self):
+        if self.backup_db.get_total() > 0:
+            if self.backup_thread is None or not self.backup_thread.isRunning():
+                log(message="[MainApp] Qayta yuborish urinilmoqda...", level="INFO")
                 self.upload_backup_data()
 
     def upload_backup_data(self):
@@ -1154,15 +1160,15 @@ class App(QMainWindow):
                     self.special_settings_dialog.password_widget.password_toggle_btn.setIcon(unview_icon_light)
                 else:
                     self.special_settings_dialog.password_widget.password_toggle_btn.setIcon(unview_icon)
-                self.special_settings_dialog.login_widget.lbl.setText("Login ✅")
-                self.special_settings_dialog.password_widget.lbl.setText("Parol ✅")
+                self.special_settings_dialog.login_widget.lbl.setText("Login <font color='#22c55e'>✓</font>")
+                self.special_settings_dialog.password_widget.lbl.setText("Parol <font color='#22c55e'>✓</font>")
         else:
             self.status_widget.status_btn.setIcon(fail_icon)
             if isinstance(self.special_settings_dialog, SpecialSettingsDialog):
                 self.special_settings_dialog.login_widget.edit.setDisabled(False)
                 self.special_settings_dialog.password_widget.edit.setDisabled(False)
-                self.special_settings_dialog.login_widget.lbl.setText("Login ❌")
-                self.special_settings_dialog.password_widget.lbl.setText("Parol ❌")
+                self.special_settings_dialog.login_widget.lbl.setText("Login <font color='#ef4444'>✗</font>")
+                self.special_settings_dialog.password_widget.lbl.setText("Parol <font color='#ef4444'>✗</font>")
             show_message(
                 stl=self.style_name,
                 message=f"Login qilib bo'lmadi. \n{data}"
@@ -1225,7 +1231,7 @@ class App(QMainWindow):
 
     def save_response_left(self, ans: bool):
         if ans:
-            self.settings_widget.left_cam_widget.lbl.setText("Chap Kamera ✅")
+            self.settings_widget.left_cam_widget.lbl.setText("Chap Kamera <font color='#22c55e'>✓</font>")
             self.cam_url_1: str = self.settings_widget.left_cam_widget.edit.text().strip()
             log(message=f"[Chap] Save Camera URL: {self.cam_url_1}", level="INFO")
             cipher.write(file_path="settings/cam_1.bin", data=[self.cam_url_1])
@@ -1244,7 +1250,7 @@ class App(QMainWindow):
                         message="Saqlashdan avval videoni to'xtating. [Chap]"
                     )
         else:
-            self.settings_widget.left_cam_widget.lbl.setText("Chap Kamera ❌")
+            self.settings_widget.left_cam_widget.lbl.setText("Chap Kamera <font color='#ef4444'>✗</font>")
             show_message(
                 stl=self.style_name,
                 title="Xabar",
@@ -1256,7 +1262,7 @@ class App(QMainWindow):
 
     def save_response_right(self, ans: bool):
         if ans:
-            self.settings_widget.right_cam_widget.lbl.setText("O'ng Kamera ✅")
+            self.settings_widget.right_cam_widget.lbl.setText("O'ng Kamera <font color='#22c55e'>✓</font>")
             self.cam_url_2: str = self.settings_widget.right_cam_widget.edit.text().strip()
             log(message=f"[O'ng] Save Camera URL: {self.cam_url_2}", level="INFO")
             cipher.write(file_path="settings/cam_2.bin", data=[self.cam_url_2])
@@ -1275,7 +1281,7 @@ class App(QMainWindow):
                         message="Saqlashdan avval videoni to'xtating. [O'ng]"
                     )
         else:
-            self.settings_widget.right_cam_widget.lbl.setText("O'ng Kamera ❌")
+            self.settings_widget.right_cam_widget.lbl.setText("O'ng Kamera <font color='#ef4444'>✗</font>")
             show_message(
                 stl=self.style_name,
                 title="Xabar",
@@ -1340,7 +1346,6 @@ class App(QMainWindow):
                     )
                     self.video_thread_left.image_signal.connect(self.update_frame_left)
                     self.video_thread_left.data_signal.connect(self.get_handle_data_left)
-                    self.video_thread_left.dual_signal.connect(self.get_dual_data_left)
                     self.video_thread_left.error_signal.connect(self.get_error_message_left)
                     self.video_thread_left.disconnected_signal.connect(self.disconnected_left)
                     self.video_thread_left.inner_signal.connect(self.inner_left)
@@ -1449,7 +1454,6 @@ class App(QMainWindow):
                     )
                     self.video_thread_right.image_signal.connect(self.update_frame_right)
                     self.video_thread_right.data_signal.connect(self.get_handle_data_right)
-                    self.video_thread_right.dual_signal.connect(self.get_dual_data_right)
                     self.video_thread_right.error_signal.connect(self.get_error_message_right)
                     self.video_thread_right.disconnected_signal.connect(self.disconnected_right)
                     self.video_thread_right.inner_signal.connect(self.inner_right)
@@ -1533,6 +1537,11 @@ class App(QMainWindow):
         log(message="[O'ng] Video Disconnected", level="WARNING")
         self.right_widget.switch.setChecked(False)
         self.right_widget.switch.start_transition(0)
+        self._reconnect_attempts_right = getattr(self, "_reconnect_attempts_right", 0) + 1
+        if self._reconnect_attempts_right <= 10:
+            self.right_widget.state_lbl.setText(
+                f"Qayta ulanmoqda... ({self._reconnect_attempts_right}/10)")
+            QTimer.singleShot(10_000, self._reconnect_right)
 
     def disconnected_left(self):
         if isinstance(self.video_thread_left, VideoThread):
@@ -1545,9 +1554,27 @@ class App(QMainWindow):
         log(message="[Chap] Video Disconnected", level="WARNING")
         self.left_widget.switch.setChecked(False)
         self.left_widget.switch.start_transition(0)
+        self._reconnect_attempts_left = getattr(self, "_reconnect_attempts_left", 0) + 1
+        if self._reconnect_attempts_left <= 10:
+            self.left_widget.state_lbl.setText(
+                f"Qayta ulanmoqda... ({self._reconnect_attempts_left}/10)")
+            QTimer.singleShot(10_000, self._reconnect_left)
+
+    def _reconnect_left(self):
+        if not self.running_left and self.cam_url_1:
+            log(message=f"[Chap] Auto-reconnect #{self._reconnect_attempts_left}...", level="INFO")
+            self.left_widget.switch.setChecked(True)
+            self.left_widget.switch.start_transition(2)
+
+    def _reconnect_right(self):
+        if not self.running_right and self.cam_url_2:
+            log(message=f"[O'ng] Auto-reconnect #{self._reconnect_attempts_right}...", level="INFO")
+            self.right_widget.switch.setChecked(True)
+            self.right_widget.switch.start_transition(2)
 
     def update_frame_left(self, pixmap: QPixmap):
         if self.running_left:
+            self._reconnect_attempts_left = 0
             self.left_widget.frame_lbl.setPixmap(pixmap)
             self.last_image_left: QPixmap = pixmap
 
@@ -1562,6 +1589,7 @@ class App(QMainWindow):
 
     def update_frame_right(self, pixmap: QPixmap):
         if self.running_right:
+            self._reconnect_attempts_right = 0
             self.right_widget.frame_lbl.setPixmap(pixmap)
             self.last_image_right: QPixmap = pixmap
 
@@ -1609,7 +1637,14 @@ class App(QMainWindow):
     def get_handle_data_left(self, data: dict):
         if max(self.last_scale_weight) < min_send_kg:
             return
-        self.last_data_left[wagonNumber] = data.get(wagonNumber)
+        wagon_num = data.get(wagonNumber)
+        if wagon_num is None or wagon_num == identifier * num_count:
+            self.last_data_left = {}
+            self.left_widget.frame_lbl.number_lbl.clear()
+            self.left_widget.frame_lbl.number_image_lbl.clear()
+            return
+        self.last_data_left["candidates"] = data.get("candidates")
+        self.last_data_left[wagonNumber] = wagon_num
         if self.last_data_left[wagonNumber].count(identifier) == 1:
             self.last_data_left[wagonNumber] = fix_luhn_code(code=str(self.last_data_left[wagonNumber]))
 
@@ -1634,7 +1669,14 @@ class App(QMainWindow):
     def get_handle_data_right(self, data: dict):
         if max(self.last_scale_weight) < min_send_kg:
             return
-        self.last_data_right[wagonNumber] = data.get(wagonNumber)
+        wagon_num = data.get(wagonNumber)
+        if wagon_num is None or wagon_num == identifier * num_count:
+            self.last_data_right = {}
+            self.right_widget.frame_lbl.number_lbl.clear()
+            self.right_widget.frame_lbl.number_image_lbl.clear()
+            return
+        self.last_data_right["candidates"] = data.get("candidates")
+        self.last_data_right[wagonNumber] = wagon_num
 
         if self.last_data_right[wagonNumber].count(identifier) == 1:
             self.last_data_right[wagonNumber] = fix_luhn_code(code=str(self.last_data_right[wagonNumber]))
@@ -1660,6 +1702,8 @@ class App(QMainWindow):
     def get_dual_data_left(self, candidates: list):
         if getattr(self, "_dual_dialog_open", False):
             return
+        if QApplication.activeModalWidget() is not None:
+            return
         try:
             from ui.dialogs import WagonChoiceDialog
             from PyQt6.QtWidgets import QDialog
@@ -1674,6 +1718,8 @@ class App(QMainWindow):
 
     def get_dual_data_right(self, candidates: list):
         if getattr(self, "_dual_dialog_open", False):
+            return
+        if QApplication.activeModalWidget() is not None:
             return
         try:
             from ui.dialogs import WagonChoiceDialog
@@ -1783,12 +1829,23 @@ class App(QMainWindow):
             print(f"[MainApp.get_auto_data_right] {err}")
 
     def upload_handle_data_left(self):
-        from ui.dialogs import RepeatWagonDialog
+        from ui.dialogs import RepeatWagonDialog, WagonChoiceDialog
         from PyQt6.QtWidgets import QDialog as _QDialog
         if max(self.last_scale_weight) > min_send_kg:
             if self.video_thread_left is not None:
                 if self.video_thread_left.running:
-                    wn = self.last_data_left.get(wagonNumber, identifier * num_count)
+                    # Tasdiqlash bosilgan paytdagi ma'lumotni muzlatib qo'yamiz
+                    frozen_data = dict(self.last_data_left)
+
+                    # 1 kadrda 2 ta raqam aniqlangan bo'lsa — tanlash dialogi
+                    candidates = frozen_data.get("candidates")
+                    if candidates and len(candidates) >= 2:
+                        dlg = WagonChoiceDialog(style_name=self.style_name, candidates=candidates)
+                        if dlg.exec() != _QDialog.DialogCode.Accepted or not dlg.selected:
+                            return
+                        frozen_data = dict(dlg.selected)
+
+                    wn = frozen_data.get(wagonNumber, identifier * num_count)
                     if wn in self.wagon_ids and identifier not in wn:
                         rec = BufferDB().get_today_wagon(wn)
                         dlg = RepeatWagonDialog(
@@ -1799,10 +1856,9 @@ class App(QMainWindow):
                         )
                         if dlg.exec() != _QDialog.DialogCode.Accepted:
                             return
+                    # Dialog tasdiqlanganidan keyin muzlangan ma'lumotni tiklash
+                    self.last_data_left = frozen_data
                     self.wagon_ids.append(wn)
-                    self.progressbar: ProgressBar = ProgressBar()
-                    self.progressbar.change_style(style_name=self.style_name)
-                    self.progressbar.show()
                     self.upload_left: bool = True
                     self.send()
                 else:
@@ -1822,12 +1878,23 @@ class App(QMainWindow):
             )
 
     def upload_handle_data_right(self):
-        from ui.dialogs import RepeatWagonDialog
+        from ui.dialogs import RepeatWagonDialog, WagonChoiceDialog
         from PyQt6.QtWidgets import QDialog as _QDialog
         if max(self.last_scale_weight) > min_send_kg:
             if self.video_thread_right is not None:
                 if self.video_thread_right.running:
-                    wn = self.last_data_right.get(wagonNumber, identifier * num_count)
+                    # Tasdiqlash bosilgan paytdagi ma'lumotni muzlatib qo'yamiz
+                    frozen_data = dict(self.last_data_right)
+
+                    # 1 kadrda 2 ta raqam aniqlangan bo'lsa — tanlash dialogi
+                    candidates = frozen_data.get("candidates")
+                    if candidates and len(candidates) >= 2:
+                        dlg = WagonChoiceDialog(style_name=self.style_name, candidates=candidates)
+                        if dlg.exec() != _QDialog.DialogCode.Accepted or not dlg.selected:
+                            return
+                        frozen_data = dict(dlg.selected)
+
+                    wn = frozen_data.get(wagonNumber, identifier * num_count)
                     if wn in self.wagon_ids and identifier not in wn:
                         rec = BufferDB().get_today_wagon(wn)
                         dlg = RepeatWagonDialog(
@@ -1838,10 +1905,9 @@ class App(QMainWindow):
                         )
                         if dlg.exec() != _QDialog.DialogCode.Accepted:
                             return
+                    # Dialog tasdiqlanganidan keyin muzlangan ma'lumotni tiklash
+                    self.last_data_right = frozen_data
                     self.wagon_ids.append(wn)
-                    self.progressbar: ProgressBar = ProgressBar()
-                    self.progressbar.change_style(style_name=self.style_name)
-                    self.progressbar.show()
                     self.upload_right: bool = True
                     self.send()
                 else:
@@ -1968,6 +2034,22 @@ class App(QMainWindow):
                 self.sending_data.stationCode = self.config.get(STATION_CODE, default_station_code)
                 self.sending_data.scaleCode = self.config.get(SCALE_CODE, default_scale_code)
                 self.sending_data.createdDate = current_time()
+
+                if self.sending_data.scaleNumber == 0 and not self.config.get(SCALE_DISABLE, False):
+                    ans = ask_message(
+                        stl=self.style_name,
+                        title="Diqqat",
+                        message="Tarozi og'irligi 0 kg ko'rsatmoqda.\nTarozi ulanganmi? Baribir yuborishni davom ettirasizmi?"
+                    )
+                    if ans != QMessageBox.StandardButton.Yes:
+                        if not self.config.get(AUTO, False):
+                            self.left_widget.frame_lbl.btn.setDisabled(False)
+                            self.right_widget.frame_lbl.btn.setDisabled(False)
+                        return
+
+                self.progressbar = ProgressBar()
+                self.progressbar.change_style(style_name=self.style_name)
+                self.progressbar.show()
 
                 self.upload_thread: UploadThread = UploadThread(
                     data=self.sending_data,
@@ -2099,8 +2181,9 @@ class App(QMainWindow):
             log(message=f"[MainApp.get_upload_response] Yuborib bo'lmadi. >>> {data}")
             show_message(
                 stl=self.style_name,
-                message=f"Yuborib bo'lmadi. >>> {data}"
+                message="Yuborib bo'lmadi. Ma'lumot saqlandi, 30 soniyadan keyin qayta uriniladi."
             )
+            QTimer.singleShot(30_000, self._retry_upload)
 
     def backup_upload_response(self, ans: bool, data: dict):
         if not self.config.get(AUTO, False) and not self.config.get(BTN_DISABLE, False):

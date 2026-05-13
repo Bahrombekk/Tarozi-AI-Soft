@@ -108,6 +108,7 @@ def get_base_url(url: str = get_token_url) -> str:
 
 
 def ping(station_code: str, ping_url: str | None = None) -> bool:
+    from requests.adapters import HTTPAdapter
     urls = (
         [ping_url] if ping_url
         else [
@@ -116,11 +117,14 @@ def ping(station_code: str, ping_url: str | None = None) -> bool:
         ]
     )
     for url in urls:
+        session = requests.Session()
+        session.mount("https://", HTTPAdapter(max_retries=0))
+        session.mount("http://",  HTTPAdapter(max_retries=0))
         try:
-            response = requests.post(
+            response = session.post(
                 url=url,
                 json={"stationCode": str(station_code)},
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "Connection": "close"},
                 timeout=8,
                 verify=False,
             )
@@ -128,4 +132,6 @@ def ping(station_code: str, ping_url: str | None = None) -> bool:
             return response.status_code in (200, 201)
         except Exception as err:
             log(message=f"[api.ping] {url}: {err}", level="WARNING")
+        finally:
+            session.close()
     return False
