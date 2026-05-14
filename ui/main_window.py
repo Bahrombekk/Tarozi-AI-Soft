@@ -100,7 +100,12 @@ class App(QMainWindow):
 
         self.setWindowIcon(window_icon)
         self.setWindowTitle(window_title)
-        self.setGeometry((SCREEN_WIDTH - WIDTH) // 2, (SCREEN_HEIGHT - HEIGHT) // 2, WIDTH, HEIGHT)
+        _avail = QApplication.primaryScreen().availableGeometry()
+        _w = int(_avail.width() * 0.85)
+        _h = int(_avail.height() * 0.88)
+        _x = _avail.x() + (_avail.width() - _w) // 2
+        _y = _avail.y() + (_avail.height() - _h) // 2
+        self.setGeometry(_x, _y, _w, _h)
 
         self.progressbar: ProgressBar = ProgressBar()
         self.progress_thread: ProgressThread = ProgressThread()

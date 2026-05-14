@@ -49,13 +49,19 @@ class DataMixin:
     def get_handle_data_left(self, data: dict):
         if max(self.last_scale_weight) < min_send_kg:
             return
-        wn = data.get(wagonNumber)
-        if wn and wn.count(identifier) == 1:
-            wn = fix_luhn_code(wn)
-        self.last_data_left[wagonNumber] = wn
+        wagon_num = data.get(wagonNumber)
+        if wagon_num is None or wagon_num == identifier * num_count:
+            self.last_data_left = {}
+            self.left_widget.frame_lbl.number_lbl.clear()
+            self.left_widget.frame_lbl.number_image_lbl.clear()
+            return
+        self.last_data_left["candidates"] = data.get("candidates")
+        self.last_data_left[wagonNumber] = wagon_num
+        if self.last_data_left[wagonNumber].count(identifier) == 1:
+            self.last_data_left[wagonNumber] = fix_luhn_code(code=str(self.last_data_left[wagonNumber]))
         self.last_data_left[wagonAttachId] = data.get(wagonAttachId)
         self.last_data_left[wagonNumberAttachId] = data.get(wagonNumberAttachId)
-        self.left_widget.frame_lbl.number_lbl.setText(str(wn))
+        self.left_widget.frame_lbl.number_lbl.setText(str(self.last_data_left[wagonNumber]))
         nid = self.last_data_left.get(wagonNumberAttachId)
         if isinstance(nid, np.ndarray):
             self.left_widget.frame_lbl.number_image_lbl.setPixmap(
@@ -64,13 +70,19 @@ class DataMixin:
     def get_handle_data_right(self, data: dict):
         if max(self.last_scale_weight) < min_send_kg:
             return
-        wn = data.get(wagonNumber)
-        if wn and wn.count(identifier) == 1:
-            wn = fix_luhn_code(wn)
-        self.last_data_right[wagonNumber] = wn
+        wagon_num = data.get(wagonNumber)
+        if wagon_num is None or wagon_num == identifier * num_count:
+            self.last_data_right = {}
+            self.right_widget.frame_lbl.number_lbl.clear()
+            self.right_widget.frame_lbl.number_image_lbl.clear()
+            return
+        self.last_data_right["candidates"] = data.get("candidates")
+        self.last_data_right[wagonNumber] = wagon_num
+        if self.last_data_right[wagonNumber].count(identifier) == 1:
+            self.last_data_right[wagonNumber] = fix_luhn_code(code=str(self.last_data_right[wagonNumber]))
         self.last_data_right[wagonAttachId2] = data.get(wagonAttachId)
         self.last_data_right[wagonNumberAttachId] = data.get(wagonNumberAttachId)
-        self.right_widget.frame_lbl.number_lbl.setText(str(wn))
+        self.right_widget.frame_lbl.number_lbl.setText(str(self.last_data_right[wagonNumber]))
         nid = self.last_data_right.get(wagonNumberAttachId)
         if isinstance(nid, np.ndarray):
             self.right_widget.frame_lbl.number_image_lbl.setPixmap(

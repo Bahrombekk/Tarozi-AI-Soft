@@ -14,7 +14,7 @@ from core.config import (
 )
 from core.database import current_time, BufferDB
 from threads.upload import UploadThread
-from ui.dialogs import ProgressBar, RepeatWagonDialog
+from ui.dialogs import ProgressBar, RepeatWagonDialog, WagonChoiceDialog
 from PyQt6.QtWidgets import QDialog
 from utils.helpers import show_message
 from utils.image import qpixmap_to_ndarray
@@ -65,7 +65,14 @@ class UploadMixin:
     def upload_handle_data_left(self):
         if max(self.last_scale_weight) > min_send_kg:
             if self.video_thread_left and self.video_thread_left.running:
-                wn = self._wagon_num_left()
+                frozen_data = dict(self.last_data_left)
+                candidates = frozen_data.get("candidates")
+                if candidates and len(candidates) >= 2:
+                    dlg = WagonChoiceDialog(style_name=self.style_name, candidates=candidates)
+                    if dlg.exec() != QDialog.DialogCode.Accepted or not dlg.selected:
+                        return
+                    frozen_data = dict(dlg.selected)
+                wn = frozen_data.get(wagonNumber, identifier * num_count)
                 if wn in self.wagon_ids and identifier not in wn:
                     rec = BufferDB().get_today_wagon(wn)
                     dlg = RepeatWagonDialog(
@@ -76,10 +83,8 @@ class UploadMixin:
                     )
                     if dlg.exec() != QDialog.DialogCode.Accepted:
                         return
+                self.last_data_left = frozen_data
                 self.wagon_ids.append(wn)
-                self.progressbar = ProgressBar()
-                self.progressbar.change_style(style_name=self.style_name)
-                self.progressbar.show()
                 self.upload_left = True
                 self.send()
             else:
@@ -91,7 +96,14 @@ class UploadMixin:
     def upload_handle_data_right(self):
         if max(self.last_scale_weight) > min_send_kg:
             if self.video_thread_right and self.video_thread_right.running:
-                wn = self._wagon_num_right()
+                frozen_data = dict(self.last_data_right)
+                candidates = frozen_data.get("candidates")
+                if candidates and len(candidates) >= 2:
+                    dlg = WagonChoiceDialog(style_name=self.style_name, candidates=candidates)
+                    if dlg.exec() != QDialog.DialogCode.Accepted or not dlg.selected:
+                        return
+                    frozen_data = dict(dlg.selected)
+                wn = frozen_data.get(wagonNumber, identifier * num_count)
                 if wn in self.wagon_ids and identifier not in wn:
                     rec = BufferDB().get_today_wagon(wn)
                     dlg = RepeatWagonDialog(
@@ -102,10 +114,8 @@ class UploadMixin:
                     )
                     if dlg.exec() != QDialog.DialogCode.Accepted:
                         return
+                self.last_data_right = frozen_data
                 self.wagon_ids.append(wn)
-                self.progressbar = ProgressBar()
-                self.progressbar.change_style(style_name=self.style_name)
-                self.progressbar.show()
                 self.upload_right = True
                 self.send()
             else:
@@ -160,6 +170,9 @@ class UploadMixin:
             self.sending_data.stationCode = self.config.get(STATION_CODE, default_station_code)
             self.sending_data.scaleCode = self.config.get(SCALE_CODE, default_scale_code)
             self.sending_data.createdDate = current_time()
+            self.progressbar = ProgressBar()
+            self.progressbar.change_style(style_name=self.style_name)
+            self.progressbar.show()
             self.upload_thread = self._build_upload_thread(img, img2, img_num)
             self.upload_thread.message_signal.connect(self.get_upload_response)
             self.upload_thread.progress_signal.connect(self.fake_progressbar)

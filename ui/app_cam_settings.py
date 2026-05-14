@@ -98,7 +98,7 @@ class CamSettingsMixin:
 
     def _save_response_left(self, ans: bool):
         if ans:
-            self.settings_widget.left_cam_widget.lbl.setText("Chap Kamera \u2705")
+            self.settings_widget.left_cam_widget.lbl.setText("Chap Kamera <font color='#22c55e'>\u2713</font>")
             self.cam_url_1 = self.settings_widget.left_cam_widget.edit.text().strip()
             cipher.write("settings/cam_1.bin", [self.cam_url_1])
             self.left_widget.switch.setDisabled(False)
@@ -106,7 +106,7 @@ class CamSettingsMixin:
                 self.left_widget.switch.setChecked(True)
                 self.left_widget.switch.start_transition(2)
         else:
-            self.settings_widget.left_cam_widget.lbl.setText("Chap Kamera \u274c")
+            self.settings_widget.left_cam_widget.lbl.setText("Chap Kamera <font color='#ef4444'>\u2717</font>")
             show_message(stl=self.style_name, message="Chap kamera bilan aloqa mavjud emas.")
             self.left_widget.switch.setDisabled(True)
         self.settings_widget.left_cam_widget.edit.setDisabled(False)
@@ -114,7 +114,7 @@ class CamSettingsMixin:
 
     def _save_response_right(self, ans: bool):
         if ans:
-            self.settings_widget.right_cam_widget.lbl.setText("O'ng Kamera \u2705")
+            self.settings_widget.right_cam_widget.lbl.setText("O'ng Kamera <font color='#22c55e'>\u2713</font>")
             self.cam_url_2 = self.settings_widget.right_cam_widget.edit.text().strip()
             cipher.write("settings/cam_2.bin", [self.cam_url_2])
             self.right_widget.switch.setDisabled(False)
@@ -122,7 +122,7 @@ class CamSettingsMixin:
                 self.right_widget.switch.setChecked(True)
                 self.right_widget.switch.start_transition(2)
         else:
-            self.settings_widget.right_cam_widget.lbl.setText("O'ng Kamera \u274c")
+            self.settings_widget.right_cam_widget.lbl.setText("O'ng Kamera <font color='#ef4444'>\u2717</font>")
             show_message(stl=self.style_name, message="O'ng kamera bilan aloqa mavjud emas.")
             self.right_widget.switch.setDisabled(True)
         self.settings_widget.right_cam_widget.edit.setDisabled(False)

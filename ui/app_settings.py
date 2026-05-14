@@ -93,11 +93,11 @@ class PasswordSettingsMixin:
         sd.login_widget.edit.setDisabled(False)
         sd.password_widget.edit.setDisabled(False)
         if self.last_login_status:
-            sd.login_widget.lbl.setText("Login \u2705")
-            sd.password_widget.lbl.setText("Parol \u2705")
+            sd.login_widget.lbl.setText("Login <font color='#22c55e'>\u2713</font>")
+            sd.password_widget.lbl.setText("Parol <font color='#22c55e'>\u2713</font>")
         else:
-            sd.login_widget.lbl.setText("Login \u274c")
-            sd.password_widget.lbl.setText("Parol \u274c")
+            sd.login_widget.lbl.setText("Login <font color='#ef4444'>\u2717</font>")
+            sd.password_widget.lbl.setText("Parol <font color='#ef4444'>\u2717</font>")
         sd.save_btn.clicked.connect(
             lambda: self.save_special_settings(data={
                 BTN_DISABLE: sd.btn_disable.hidden_switch.isChecked(),
