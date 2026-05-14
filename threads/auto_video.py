@@ -173,7 +173,7 @@ class AutoVideoThread(BaseVideoThread):
                         continue
 
                     if (x_min > 5 and x_max < img_w - 5 and y_min > 5 and y_max < img_h - 5
-                            and conf >= self.d_conf and x_max - x_min > 100 and cls == 0):
+                            and conf >= self.d_conf and x_max - x_min > 50 and cls == 0):
                         crop_f = np.ascontiguousarray(
                             overlay[max(0, y_min - offset - 4):min(img_h, y_max + offset + 4),
                                     max(0, x_min - offset - 4):min(img_w, x_max + offset + 4)]

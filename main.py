@@ -6,30 +6,10 @@ import ctypes
 # Working directory ni to'g'rilash
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-from PyQt6.QtWidgets import QApplication, QSplashScreen, QMessageBox
+from PyQt6.QtWidgets import QApplication, QSplashScreen
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 from PyQt6.QtNetwork import QLocalSocket, QLocalServer
-
-
-def _is_elevated() -> bool:
-    """cv2/numpy yuklamasdan turib admin huquqini tekshiradi."""
-    if os.name != "nt":
-        return hasattr(os, "geteuid") and os.geteuid() == 0
-    try:
-        return bool(ctypes.windll.shell32.IsUserAnAdmin())
-    except Exception:
-        return False
-
-
-def _show_admin_warning():
-    """Og'ir importlarsiz oddiy ogohlantirish oynasi."""
-    mb = QMessageBox()
-    mb.setIcon(QMessageBox.Icon.Warning)
-    mb.setWindowTitle("Ogohlantirish")
-    mb.setText("Dasturni administrator huquqlari bilan ishga tushiring.")
-    mb.setStandardButtons(QMessageBox.StandardButton.Ok)
-    mb.exec()
 
 
 def main():
@@ -58,11 +38,6 @@ def main():
     QLocalServer.removeServer(APP_ID)
     server = QLocalServer()
     server.listen(APP_ID)
-
-    # Admin tekshiruvi — og'ir import yo'q, splash dan oldin tez bajariladi
-    if not _is_elevated():
-        _show_admin_warning()
-        sys.exit(1)
 
     # Splash screen — iloji boricha erta ko'rsatiladi
     splash_pix = QPixmap("images/train.png")

@@ -6,7 +6,7 @@ from PyQt6.QtCore import Qt, QSize, QTimer, QRectF
 from PyQt6.QtGui import QPixmap, QPainter, QFont, QColor, QPen
 from PyQt6.QtWidgets import (QDialog, QLabel, QVBoxLayout, QHBoxLayout,
                               QPushButton, QProgressBar, QScrollArea, QWidget,
-                              QLineEdit, QFrame, QSizePolicy)
+                              QLineEdit, QFrame, QSizePolicy, QMessageBox)
 from ui.styles import get_styles, get_text_color
 from utils.image import cv2_to_qpixmap
 from core.config import (timeout, log)
@@ -21,6 +21,281 @@ except Exception:
 def _get_hidden_edit_label_switch_widget():
     from ui.settings_panel import HiddenEditLabelSwitchWidget
     return HiddenEditLabelSwitchWidget
+
+class ConfirmDialog(QDialog):
+    """Zamonaviy tasdiqlash / ogohlantirish dialogi."""
+
+    _ICON_MAP = {
+        QMessageBox.Icon.Warning:     ("⚠",  "#E07800", "#C06400"),
+        QMessageBox.Icon.Critical:    ("✕",  "#D93025", "#B51F1A"),
+        QMessageBox.Icon.Question:    ("?",  "#007CF0", "#005BB5"),
+        QMessageBox.Icon.Information: ("ℹ",  "#00A854", "#007A3D"),
+    }
+
+    def __init__(self, style_name: str, title: str, message: str,
+                 icon: QMessageBox.Icon = QMessageBox.Icon.Question,
+                 yes_text: str = "Tasdiqlash",
+                 no_text: Union[str, None] = "Bekor qilish"):
+        super().__init__()
+        from ui.theme import palettes, BG_COLOR, BG_COLOR2, BG_COLOR3, TEXT_COLOR, TEXT_COLOR2, BORDER_COLOR
+
+        self.setWindowTitle(title)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        if window_icon:
+            self.setWindowIcon(window_icon)
+        self.setMinimumWidth(480)
+        self.setMaximumWidth(600)
+
+        p    = palettes[style_name]
+        bg   = p[BG_COLOR]
+        bg2  = p[BG_COLOR2]
+        bg3  = p[BG_COLOR3]
+        txt  = p[TEXT_COLOR]
+        txt2 = p[TEXT_COLOR2]
+        brd  = p[BORDER_COLOR]
+
+        sym, clr, clr_hov = self._ICON_MAP.get(icon, ("?", "#007CF0", "#005BB5"))
+        self.setStyleSheet(f"QDialog {{ background: {bg}; }}")
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        # Banner (yuqori burchaklar yumaloq — oyna bilan mos)
+        banner = QFrame()
+        banner.setFixedHeight(76)
+        banner.setStyleSheet(f"""
+            background: {clr};
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        """)
+        banner_lt = QHBoxLayout(banner)
+        banner_lt.setContentsMargins(22, 0, 22, 0)
+        banner_lt.setSpacing(14)
+
+        # Icon doira ichida
+        icon_circle = QWidget()
+        icon_circle.setFixedSize(46, 46)
+        icon_circle.setStyleSheet("background: rgba(255,255,255,0.18); border-radius: 23px;")
+        ic_lt = QVBoxLayout(icon_circle)
+        ic_lt.setContentsMargins(0, 0, 0, 0)
+        sym_lbl = QLabel(sym)
+        sym_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sym_lbl.setFont(QFont(_default_font, 18, QFont.Weight.Bold))
+        sym_lbl.setStyleSheet("color: #fff; background: transparent;")
+        ic_lt.addWidget(sym_lbl)
+        banner_lt.addWidget(icon_circle)
+
+        title_lbl = QLabel(title)
+        title_lbl.setFont(QFont(_default_font, 15, QFont.Weight.Bold))
+        title_lbl.setStyleSheet("color: #fff; background: transparent;")
+        banner_lt.addWidget(title_lbl)
+        banner_lt.addStretch()
+        root.addWidget(banner)
+
+        # Asosiy kontent
+        body = QWidget()
+        body.setStyleSheet(f"background: {bg};")
+        body_lt = QVBoxLayout(body)
+        body_lt.setContentsMargins(24, 20, 24, 24)
+        body_lt.setSpacing(16)
+
+        # Matn kartochkasi — chap rangli chiziq bilan
+        msg_card = QFrame()
+        msg_card.setStyleSheet(f"""
+            QFrame {{
+                background: {bg2};
+                border-left: 4px solid {clr};
+                border-top: 1px solid {brd};
+                border-right: 1px solid {brd};
+                border-bottom: 1px solid {brd};
+                border-radius: 10px;
+            }}
+        """)
+        card_lt = QVBoxLayout(msg_card)
+        card_lt.setContentsMargins(16, 14, 16, 14)
+        msg_lbl = QLabel(message)
+        msg_lbl.setFont(QFont(_default_font, 13))
+        msg_lbl.setStyleSheet(f"color: {txt}; background: transparent; border: none;")
+        msg_lbl.setWordWrap(True)
+        msg_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        card_lt.addWidget(msg_lbl)
+        body_lt.addWidget(msg_card)
+
+        # Tugmalar (pill-shape)
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(12)
+        btn_row.addStretch()
+
+        if no_text:
+            no_btn = QPushButton(no_text)
+            no_btn.setMinimumHeight(46)
+            no_btn.setFont(QFont(_default_font, 13))
+            no_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            no_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: transparent;
+                    color: {txt2};
+                    border: 1.5px solid {brd};
+                    border-radius: 23px;
+                    padding: 8px 24px;
+                    min-width: 130px;
+                }}
+                QPushButton:hover {{ background: {bg3}; color: {txt}; border-color: {clr}; }}
+            """)
+            no_btn.clicked.connect(self.reject)
+            btn_row.addWidget(no_btn)
+
+        yes_btn = QPushButton(yes_text)
+        yes_btn.setMinimumHeight(46)
+        yes_btn.setFont(QFont(_default_font, 13, QFont.Weight.Bold))
+        yes_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        yes_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {clr};
+                color: #fff;
+                border-radius: 23px;
+                border: none;
+                padding: 8px 28px;
+                min-width: 130px;
+            }}
+            QPushButton:hover {{ background: {clr_hov}; }}
+            QPushButton:pressed {{ background: {clr_hov}; }}
+        """)
+        yes_btn.clicked.connect(self.accept)
+        btn_row.addWidget(yes_btn)
+
+        body_lt.addLayout(btn_row)
+        root.addWidget(body)
+
+
+class ConfirmDialog(QDialog):
+    """Compact confirmation / warning dialog."""
+
+    _ICON_MAP = {
+        QMessageBox.Icon.Warning: ("!", "#E07800", "#C06400"),
+        QMessageBox.Icon.Critical: ("X", "#D93025", "#B51F1A"),
+        QMessageBox.Icon.Question: ("?", "#007CF0", "#005BB5"),
+        QMessageBox.Icon.Information: ("i", "#00A854", "#007A3D"),
+    }
+
+    def __init__(self, style_name: str, title: str, message: str,
+                 icon: QMessageBox.Icon = QMessageBox.Icon.Question,
+                 yes_text: str = "Tasdiqlash",
+                 no_text: Union[str, None] = "Bekor qilish"):
+        super().__init__()
+        from ui.theme import palettes, BG_COLOR, BG_COLOR2, BG_COLOR3, TEXT_COLOR, TEXT_COLOR2, BORDER_COLOR
+
+        self.setWindowTitle(title)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        if window_icon:
+            self.setWindowIcon(window_icon)
+        self.setMinimumWidth(420)
+        self.setMaximumWidth(540)
+
+        p = palettes[style_name]
+        bg = p[BG_COLOR]
+        bg2 = p[BG_COLOR2]
+        bg3 = p[BG_COLOR3]
+        txt = p[TEXT_COLOR]
+        txt2 = p[TEXT_COLOR2]
+        brd = p[BORDER_COLOR]
+
+        sym, accent, accent_hover = self._ICON_MAP.get(icon, ("?", "#007CF0", "#005BB5"))
+        self.setStyleSheet(f"QDialog {{ background: {bg}; border-radius: 8px; }}")
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(22, 20, 22, 18)
+        root.setSpacing(16)
+
+        title_row = QHBoxLayout()
+        title_row.setSpacing(12)
+
+        icon_lbl = QLabel(sym)
+        icon_lbl.setFixedSize(34, 34)
+        icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_lbl.setFont(QFont(_default_font, 16, QFont.Weight.Bold))
+        icon_lbl.setStyleSheet(f"""
+            QLabel {{
+                color: {accent};
+                background: {bg2};
+                border: 1px solid {accent};
+                border-radius: 17px;
+            }}
+        """)
+        title_row.addWidget(icon_lbl)
+
+        title_lbl = QLabel(title)
+        title_lbl.setFont(QFont(_default_font, 14, QFont.Weight.Bold))
+        title_lbl.setStyleSheet(f"color: {txt}; background: transparent;")
+        title_row.addWidget(title_lbl)
+        title_row.addStretch()
+        root.addLayout(title_row)
+
+        msg_lbl = QLabel(message)
+        msg_lbl.setWordWrap(True)
+        msg_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        msg_lbl.setFont(QFont(_default_font, 12))
+        msg_lbl.setStyleSheet(f"""
+            QLabel {{
+                color: {txt};
+                background: {bg2};
+                border-left: 3px solid {accent};
+                border-radius: 6px;
+                padding: 12px 14px;
+            }}
+        """)
+        root.addWidget(msg_lbl)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(10)
+        btn_row.addStretch()
+
+        if no_text:
+            no_btn = QPushButton(no_text)
+            no_btn.setMinimumHeight(36)
+            no_btn.setFont(QFont(_default_font, 11))
+            no_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            no_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: transparent;
+                    color: {txt2};
+                    border: 1px solid {brd};
+                    border-radius: 6px;
+                    padding: 6px 18px;
+                    min-width: 104px;
+                }}
+                QPushButton:hover {{
+                    background: {bg3};
+                    color: {txt};
+                }}
+            """)
+            no_btn.clicked.connect(self.reject)
+            btn_row.addWidget(no_btn)
+
+        yes_btn = QPushButton(yes_text)
+        yes_btn.setMinimumHeight(36)
+        yes_btn.setFont(QFont(_default_font, 11, QFont.Weight.Bold))
+        yes_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        yes_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {accent};
+                color: #fff;
+                border: none;
+                border-radius: 6px;
+                padding: 6px 20px;
+                min-width: 112px;
+            }}
+            QPushButton:hover {{ background: {accent_hover}; }}
+            QPushButton:pressed {{ background: {accent_hover}; }}
+        """)
+        yes_btn.clicked.connect(self.accept)
+        btn_row.addWidget(yes_btn)
+
+        root.addLayout(btn_row)
+
 
 class ProgressBar(QDialog):
 

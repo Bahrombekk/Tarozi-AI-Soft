@@ -115,45 +115,19 @@ def ask_message(
         title: str = "Tasdiqlash",
         message: str = "Amalni tasdiqlang",
         icon: QMessageBox.Icon = QMessageBox.Icon.Question) -> int:
-    msb = QMessageBox()
-    msb.setIcon(icon)
-    msb.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-    msb.setMinimumWidth(250)
-    msb.setMinimumHeight(200)
-    bg_c = get_bg_color(style_name=stl)
-    hv_c = get_hover_color(style_name=stl)
-    txt_c = get_text_color(style_name=stl)
-    msb.setStyleSheet(f"background-color: {bg_c}; color: {txt_c}; font-size: 18px;")
-    btn_style = f"""
-        QPushButton#yes_no_btn {{
-            background: {bg_c}; color: {txt_c}; font-size: 16px;
-        }}
-        QPushButton#yes_no_btn:hover {{
-            background: {hv_c};
-        }}
-    """
-    yes_button = msb.button(QMessageBox.StandardButton.Yes)
-    no_button = msb.button(QMessageBox.StandardButton.No)
-    yes_button.setText("Tasdiqlash")
-    no_button.setText("Bekor qilish")
-    yes_button.setObjectName("yes_no_btn")
-    no_button.setObjectName("yes_no_btn")
-    yes_button.setStyleSheet(btn_style)
-    no_button.setStyleSheet(btn_style)
-    if window_icon:
-        msb.setWindowIcon(window_icon)
-    msb.setText(message)
-    msb.setWindowTitle(title)
-    msb.setDefaultButton(no_button)
-    return msb.exec()
+    from ui.dialogs import ConfirmDialog
+    from PyQt6.QtWidgets import QDialog
+    dlg = ConfirmDialog(style_name=stl, title=title, message=message, icon=icon)
+    if dlg.exec() == QDialog.DialogCode.Accepted:
+        return QMessageBox.StandardButton.Yes
+    return QMessageBox.StandardButton.No
 
 
-_active_message_box: QMessageBox | None = None
+_active_message_box = None
 
 
 def show_message(stl: str, message: str = "Xabar", title: str = "Xabar") -> int:
     global _active_message_box
-    # Ochiq dialog bo'lsa yopamiz — bir vaqtda faqat bitta dialog ko'rinsin
     if _active_message_box is not None:
         try:
             _active_message_box.close()
@@ -161,34 +135,14 @@ def show_message(stl: str, message: str = "Xabar", title: str = "Xabar") -> int:
             pass
         _active_message_box = None
 
-    msb = QMessageBox()
-    msb.setIcon(QMessageBox.Icon.Information)
-    msb.setStandardButtons(QMessageBox.StandardButton.Yes)
-    msb.setMinimumWidth(250)
-    msb.setMinimumHeight(200)
-    bg_c = get_bg_color(style_name=stl)
-    hv_c = get_hover_color(style_name=stl)
-    txt_c = get_text_color(style_name=stl)
-    msb.setStyleSheet(f"background-color: {bg_c}; color: {txt_c}; font-size: 18px;")
-    btn_style = f"""
-        QPushButton#yes_no_btn {{
-            background: {bg_c}; color: {txt_c}; font-size: 16px;
-        }}
-        QPushButton#yes_no_btn:hover {{
-            background: {hv_c};
-        }}
-    """
-    yes_button = msb.button(QMessageBox.StandardButton.Yes)
-    yes_button.setText("Yopish")
-    yes_button.setObjectName("yes_no_btn")
-    yes_button.setStyleSheet(btn_style)
-    if isinstance(window_icon, QIcon):
-        msb.setWindowIcon(window_icon)
-    msb.setText(message)
-    msb.setWindowTitle(title)
-    msb.setDefaultButton(QMessageBox.StandardButton.No)
-    _active_message_box = msb
-    result = msb.exec()
+    from ui.dialogs import ConfirmDialog
+    dlg = ConfirmDialog(
+        style_name=stl, title=title, message=message,
+        icon=QMessageBox.Icon.Information,
+        yes_text="Yopish", no_text=None,
+    )
+    _active_message_box = dlg
+    result = dlg.exec()
     _active_message_box = None
     return result
 

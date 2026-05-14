@@ -162,6 +162,7 @@ class App(QMainWindow):
         self.com_ports: list[str] = []
         self.scales: list = []
         self.sending_data: SendingData = SendingData()
+        self.pending_upload: dict | None = None
 
         self.send_time: str = self.time_format(tm=send_second)
         self.send_current_time: str = self.send_time
@@ -1621,6 +1622,7 @@ class App(QMainWindow):
             self.sending_data.stationCode = self.config.get(STATION_CODE, default_station_code)
             self.sending_data.scaleCode = self.config.get(SCALE_CODE, default_scale_code)
             self.sending_data.createdDate = current_time()
+            self._snapshot_pending_upload()
 
             self.upload_thread: UploadThread = UploadThread(
                 data=self.sending_data,
@@ -1833,24 +1835,217 @@ class App(QMainWindow):
             log(message=f"[MainApp.get_auto_data_right] {err}")
             print(f"[MainApp.get_auto_data_right] {err}")
 
+    def _retry_detect(self, video_thread, pixmap, frame_override: np.ndarray | None = None) -> dict:
+        try:
+            if video_thread is None:
+                return {}
+            frame = frame_override if isinstance(frame_override, np.ndarray) else getattr(video_thread, "latest_frame", None)
+            if isinstance(frame, np.ndarray):
+                frame = deepcopy(frame)
+            else:
+                if pixmap is None:
+                    return {}
+                frame = qpixmap_to_ndarray(pixmap=pixmap)
+            if frame is None or frame.size == 0:
+                return {}
+            _, data = video_thread._detect(frame)
+            return data or {}
+        except Exception as err:
+            log(message=f"[MainApp._retry_detect] {err}")
+            return {}
+
+    def _freeze_frame(self, video_thread, pixmap) -> np.ndarray | None:
+        frame = getattr(video_thread, "latest_frame", None) if video_thread is not None else None
+        if isinstance(frame, np.ndarray):
+            return deepcopy(frame)
+        if pixmap is not None:
+            return qpixmap_to_ndarray(pixmap=pixmap)
+        return None
+
+    def _wagon_number_score(self, value: str | None) -> tuple[int, int]:
+        value = str(value or identifier * num_count)
+        complete = int(len(value) == num_count and identifier not in value)
+        return complete, -value.count(identifier)
+
+    def _normalize_confirm_data(self, data: dict) -> dict:
+        data = dict(data or {})
+        wn = str(data.get(wagonNumber, identifier * num_count))
+        if wn.count(identifier) in (1, 2):
+            wn = fix_luhn_code(code=wn)
+        data[wagonNumber] = wn
+        return data
+
+    def _refresh_confirm_data(self, current: dict, video_thread, pixmap,
+                              frame_override: np.ndarray | None = None) -> dict:
+        current = self._normalize_confirm_data(current)
+        retry = self._normalize_confirm_data(self._retry_detect(video_thread, pixmap, frame_override))
+        retry_score = self._wagon_number_score(retry.get(wagonNumber))
+        current_score = self._wagon_number_score(current.get(wagonNumber))
+        retry_number = str(retry.get(wagonNumber, identifier * num_count))
+        if retry.get(wagonNumberAttachId) is not None and retry_number != identifier * num_count:
+            return retry
+        if retry_score > current_score:
+            return retry
+        if retry_score == current_score and retry.get(wagonNumberAttachId) is not None:
+            if current.get(wagonNumberAttachId) is None:
+                return retry
+        return current
+
+    def _show_confirm_data(self, side: str, data: dict):
+        number = str(data.get(wagonNumber, identifier * num_count))
+        image = data.get(wagonNumberAttachId)
+        frame_lbl = self.left_widget.frame_lbl if side == "left" else self.right_widget.frame_lbl
+        frame_lbl.number_lbl.setText(number)
+        if isinstance(image, np.ndarray):
+            frame_lbl.number_image_lbl.setPixmap(rounded_pixmap(
+                pixmap=cv2_to_qpixmap(cv_img=image),
+                radius=8,
+            ))
+        elif isinstance(image, QPixmap):
+            frame_lbl.number_image_lbl.setPixmap(rounded_pixmap(
+                pixmap=image,
+                radius=8,
+            ))
+
+    def _commit_confirm_data(self, side: str, data: dict) -> dict:
+        data = self._normalize_confirm_data(data)
+        if side == "left":
+            self.last_data_left = data
+        else:
+            if data.get(wagonAttachId2) is None and data.get(wagonAttachId) is not None:
+                data[wagonAttachId2] = data.get(wagonAttachId)
+            self.last_data_right = data
+        self._show_confirm_data(side, data)
+        log(message=f"[confirm.commit.{side}] wagonNumber={data.get(wagonNumber)} "
+                    f"crop={isinstance(data.get(wagonNumberAttachId), np.ndarray)}", level="INFO")
+        return data
+
+    def _send_committed_confirm(self, side: str, data: dict,
+                                left_frame: np.ndarray | None = None,
+                                right_frame: np.ndarray | None = None):
+        data = self._normalize_confirm_data(data)
+        self.sending_data.wagonNumber = data.get(wagonNumber, identifier * num_count)
+        self.sending_data.scaleNumber = max(self.last_scale_weight)
+        self.sending_data.stationCode = self.config.get(STATION_CODE, default_station_code)
+        self.sending_data.scaleCode = self.config.get(SCALE_CODE, default_scale_code)
+        self.sending_data.createdDate = current_time()
+
+        if side == "left":
+            self.wagon_image = data.get(wagonAttachId) if isinstance(data.get(wagonAttachId), np.ndarray) else left_frame
+            self.wagon_image2 = right_frame
+        else:
+            self.wagon_image = left_frame
+            if isinstance(data.get(wagonAttachId2), np.ndarray):
+                self.wagon_image2 = data.get(wagonAttachId2)
+            elif isinstance(data.get(wagonAttachId), np.ndarray):
+                self.wagon_image2 = data.get(wagonAttachId)
+            else:
+                self.wagon_image2 = right_frame
+        self.wagon_id_image = data.get(wagonNumberAttachId)
+
+        if self.sending_data.scaleNumber == 0 and not self.config.get(SCALE_DISABLE, False):
+            ans = ask_message(
+                stl=self.style_name,
+                title="Tarozi ogohlantirishsi",
+                message=(
+                    "Tarozi hozir 0 kg ko'rsatmoqda.\n\n"
+                    "Tarozi to'g'ri ulanganligi va vagon tarozida to'liq turganligini tekshiring.\n"
+                    "Baribir tortishni davom ettirasizmi?"
+                ),
+                icon=QMessageBox.Icon.Warning
+            )
+            if ans != QMessageBox.StandardButton.Yes:
+                if not self.config.get(AUTO, False):
+                    self.left_widget.frame_lbl.btn.setDisabled(False)
+                    self.right_widget.frame_lbl.btn.setDisabled(False)
+                return
+
+        self.progressbar = ProgressBar()
+        self.progressbar.change_style(style_name=self.style_name)
+        self.progressbar.show()
+        self._snapshot_pending_upload()
+        log(message=f"[confirm.send.{side}] wagonNumber={self.sending_data.wagonNumber} "
+                    f"crop={isinstance(self.wagon_id_image, np.ndarray)}", level="INFO")
+
+        self.upload_thread: UploadThread = UploadThread(
+            data=self.sending_data,
+            img_id=self.wagon_image,
+            img_id2=self.wagon_image2,
+            img_number=self.wagon_id_image,
+            bs_url=self.config.get(BASE_URL, base_url),
+            login_data={
+                "login": self.config.get(USERNAME, default_username),
+                "password": self.config.get(PASSWORD, default_password),
+            }
+        )
+        self.upload_thread.message_signal.connect(self.get_upload_response)
+        self.upload_thread.progress_signal.connect(self.fake_progressbar)
+        self.upload_thread.start()
+        self.upload_right = False
+        self.upload_left = False
+
     def upload_handle_data_left(self):
         from ui.dialogs import RepeatWagonDialog, WagonChoiceDialog
         from PyQt6.QtWidgets import QDialog as _QDialog
         if max(self.last_scale_weight) > min_send_kg:
             if self.video_thread_left is not None:
                 if self.video_thread_left.running:
+                    self.left_widget.frame_lbl.btn.setDisabled(True)
+                    self.right_widget.frame_lbl.btn.setDisabled(True)
+                    left_frame = self._freeze_frame(self.video_thread_left, self.last_image_left)
+                    right_frame = self._freeze_frame(self.video_thread_right, self.last_image_right)
                     # Tasdiqlash bosilgan paytdagi ma'lumotni muzlatib qo'yamiz
-                    frozen_data = dict(self.last_data_left)
+                    frozen_data = self._refresh_confirm_data(
+                        self.last_data_left, self.video_thread_left, self.last_image_left, left_frame
+                    )
+                    if isinstance(left_frame, np.ndarray):
+                        frozen_data[wagonAttachId] = left_frame
 
                     # 1 kadrda 2 ta raqam aniqlangan bo'lsa — tanlash dialogi
                     candidates = frozen_data.get("candidates")
                     if candidates and len(candidates) >= 2:
                         dlg = WagonChoiceDialog(style_name=self.style_name, candidates=candidates)
                         if dlg.exec() != _QDialog.DialogCode.Accepted or not dlg.selected:
+                            self.left_widget.frame_lbl.btn.setDisabled(False)
+                            self.right_widget.frame_lbl.btn.setDisabled(False)
                             return
                         frozen_data = dict(dlg.selected)
 
                     wn = frozen_data.get(wagonNumber, identifier * num_count)
+                    if not self._wagon_number_score(wn)[0]:
+                        retry = self._retry_detect(self.video_thread_left, self.last_image_left, left_frame)
+                        retry_candidates = retry.get("candidates")
+                        retry_wn = retry.get(wagonNumber, identifier * num_count)
+                        if retry_candidates and len(retry_candidates) >= 2:
+                            dlg = WagonChoiceDialog(style_name=self.style_name, candidates=retry_candidates)
+                            if dlg.exec() != _QDialog.DialogCode.Accepted or not dlg.selected:
+                                self.left_widget.frame_lbl.btn.setDisabled(False)
+                                self.right_widget.frame_lbl.btn.setDisabled(False)
+                                return
+                            frozen_data = dict(dlg.selected)
+                            wn = frozen_data.get(wagonNumber, identifier * num_count)
+                        elif retry_wn.count(identifier) < wn.count(identifier):
+                            if retry_wn.count(identifier) == 1:
+                                retry_wn = fix_luhn_code(code=str(retry_wn))
+                            frozen_data = retry
+                            if isinstance(left_frame, np.ndarray):
+                                frozen_data[wagonAttachId] = left_frame
+                            wn = retry_wn
+                            frozen_data[wagonNumber] = wn
+                    if not self._wagon_number_score(wn)[0]:
+                        ans = ask_message(
+                            stl=self.style_name,
+                            title="Vagon raqami aniqlanmadi",
+                            message=(
+                                "Vagon raqami to'liq o'qilmadi yoki noto'g'ri aniqlangan bo'lishi mumkin.\n\n"
+                                "Baribir tortishni davom ettirasizmi?"
+                            ),
+                            icon=QMessageBox.Icon.Warning
+                        )
+                        if ans != QMessageBox.StandardButton.Yes:
+                            self.left_widget.frame_lbl.btn.setDisabled(False)
+                            self.right_widget.frame_lbl.btn.setDisabled(False)
+                            return
                     if wn in self.wagon_ids and identifier not in wn:
                         rec = BufferDB().get_today_wagon(wn)
                         dlg = RepeatWagonDialog(
@@ -1860,12 +2055,15 @@ class App(QMainWindow):
                             weight_kg=str(rec[scaleNumber]) if rec else None,
                         )
                         if dlg.exec() != _QDialog.DialogCode.Accepted:
+                            self.left_widget.frame_lbl.btn.setDisabled(False)
+                            self.right_widget.frame_lbl.btn.setDisabled(False)
                             return
                     # Dialog tasdiqlanganidan keyin muzlangan ma'lumotni tiklash
-                    self.last_data_left = frozen_data
+                    frozen_data[wagonNumber] = wn
+                    frozen_data = self._commit_confirm_data("left", frozen_data)
                     self.wagon_ids.append(wn)
                     self.upload_left: bool = True
-                    self.send()
+                    self._send_committed_confirm("left", frozen_data, left_frame, right_frame)
                 else:
                     show_message(
                         stl=self.style_name,
@@ -1888,18 +2086,64 @@ class App(QMainWindow):
         if max(self.last_scale_weight) > min_send_kg:
             if self.video_thread_right is not None:
                 if self.video_thread_right.running:
+                    self.left_widget.frame_lbl.btn.setDisabled(True)
+                    self.right_widget.frame_lbl.btn.setDisabled(True)
+                    left_frame = self._freeze_frame(self.video_thread_left, self.last_image_left)
+                    right_frame = self._freeze_frame(self.video_thread_right, self.last_image_right)
                     # Tasdiqlash bosilgan paytdagi ma'lumotni muzlatib qo'yamiz
-                    frozen_data = dict(self.last_data_right)
+                    frozen_data = self._refresh_confirm_data(
+                        self.last_data_right, self.video_thread_right, self.last_image_right, right_frame
+                    )
+                    if isinstance(right_frame, np.ndarray):
+                        frozen_data[wagonAttachId] = right_frame
+                        frozen_data[wagonAttachId2] = right_frame
 
                     # 1 kadrda 2 ta raqam aniqlangan bo'lsa — tanlash dialogi
                     candidates = frozen_data.get("candidates")
                     if candidates and len(candidates) >= 2:
                         dlg = WagonChoiceDialog(style_name=self.style_name, candidates=candidates)
                         if dlg.exec() != _QDialog.DialogCode.Accepted or not dlg.selected:
+                            self.left_widget.frame_lbl.btn.setDisabled(False)
+                            self.right_widget.frame_lbl.btn.setDisabled(False)
                             return
                         frozen_data = dict(dlg.selected)
 
                     wn = frozen_data.get(wagonNumber, identifier * num_count)
+                    if not self._wagon_number_score(wn)[0]:
+                        retry = self._retry_detect(self.video_thread_right, self.last_image_right, right_frame)
+                        retry_candidates = retry.get("candidates")
+                        retry_wn = retry.get(wagonNumber, identifier * num_count)
+                        if retry_candidates and len(retry_candidates) >= 2:
+                            dlg = WagonChoiceDialog(style_name=self.style_name, candidates=retry_candidates)
+                            if dlg.exec() != _QDialog.DialogCode.Accepted or not dlg.selected:
+                                self.left_widget.frame_lbl.btn.setDisabled(False)
+                                self.right_widget.frame_lbl.btn.setDisabled(False)
+                                return
+                            frozen_data = dict(dlg.selected)
+                            wn = frozen_data.get(wagonNumber, identifier * num_count)
+                        elif retry_wn.count(identifier) < wn.count(identifier):
+                            if retry_wn.count(identifier) == 1:
+                                retry_wn = fix_luhn_code(code=str(retry_wn))
+                            frozen_data = retry
+                            if isinstance(right_frame, np.ndarray):
+                                frozen_data[wagonAttachId] = right_frame
+                                frozen_data[wagonAttachId2] = right_frame
+                            wn = retry_wn
+                            frozen_data[wagonNumber] = wn
+                    if not self._wagon_number_score(wn)[0]:
+                        ans = ask_message(
+                            stl=self.style_name,
+                            title="Vagon raqami aniqlanmadi",
+                            message=(
+                                "Vagon raqami to'liq o'qilmadi yoki noto'g'ri aniqlangan bo'lishi mumkin.\n\n"
+                                "Baribir tortishni davom ettirasizmi?"
+                            ),
+                            icon=QMessageBox.Icon.Warning
+                        )
+                        if ans != QMessageBox.StandardButton.Yes:
+                            self.left_widget.frame_lbl.btn.setDisabled(False)
+                            self.right_widget.frame_lbl.btn.setDisabled(False)
+                            return
                     if wn in self.wagon_ids and identifier not in wn:
                         rec = BufferDB().get_today_wagon(wn)
                         dlg = RepeatWagonDialog(
@@ -1909,12 +2153,15 @@ class App(QMainWindow):
                             weight_kg=str(rec[scaleNumber]) if rec else None,
                         )
                         if dlg.exec() != _QDialog.DialogCode.Accepted:
+                            self.left_widget.frame_lbl.btn.setDisabled(False)
+                            self.right_widget.frame_lbl.btn.setDisabled(False)
                             return
                     # Dialog tasdiqlanganidan keyin muzlangan ma'lumotni tiklash
-                    self.last_data_right = frozen_data
+                    frozen_data[wagonNumber] = wn
+                    frozen_data = self._commit_confirm_data("right", frozen_data)
                     self.wagon_ids.append(wn)
                     self.upload_right: bool = True
-                    self.send()
+                    self._send_committed_confirm("right", frozen_data, left_frame, right_frame)
                 else:
                     show_message(
                         stl=self.style_name,
@@ -1961,16 +2208,50 @@ class App(QMainWindow):
             return deepcopy(self.last_data_right.get(wagonNumberAttachId))
         return None
 
+    def _snapshot_pending_upload(self):
+        self.pending_upload = {
+            wagonNumber: self.sending_data.wagonNumber,
+            scaleNumber: self.sending_data.scaleNumber,
+            createdDate: self.sending_data.createdDate,
+            stationCode: self.sending_data.stationCode,
+            scaleCode: self.sending_data.scaleCode,
+            wagonAttachId: self.wagon_image,
+            wagonAttachId2: self.wagon_image2,
+            wagonNumberAttachId: self.wagon_id_image,
+        }
+
     def find_scales(self):
         try:
             if self.config.get(SCALE_DISABLE, False):
                 self.scales = []
                 self.com_ports = []
                 return
+            available_ports = find_all_scale_ports()
             self.scales = open_all_scales()
             self.com_ports: list[str] = [str(i.port) for i in self.scales]
+            if available_ports and not self.scales and not is_process_elevated():
+                QTimer.singleShot(1200, lambda: self._offer_admin_restart(available_ports))
         except Exception as err:
             log(message=f"[MainApp.find_scales] {err}")
+
+    def _offer_admin_restart(self, ports: list[str]):
+        try:
+            ans = QMessageBox.question(
+                self,
+                "Administrator huquqi kerak",
+                f"COM port ({', '.join(ports)}) ochilmadi.\n"
+                "Tarozi qurilmasi bilan ulanish uchun administrator sifatida qayta ishga tushirilsinmi?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if ans == QMessageBox.StandardButton.Yes:
+                import ctypes as _ct
+                exe = sys.executable
+                params = "" if getattr(sys, "frozen", False) else f'"{os.path.abspath(sys.argv[0])}"'
+                _ct.windll.shell32.ShellExecuteW(None, "runas", exe, params, None, 1)
+                QApplication.quit()
+        except Exception as err:
+            log(message=f"[MainApp._offer_admin_restart] {err}")
 
     def scale_weight(self, massa: dict):
         try:
@@ -2014,25 +2295,34 @@ class App(QMainWindow):
                 self.left_widget.frame_lbl.btn.setDisabled(True)
                 self.right_widget.frame_lbl.btn.setDisabled(True)
             if max(self.last_scale_weight) > min_send_kg:
-                if self.get_wagon_numer_right().count(identifier) == self.get_wagon_numer_left().count(
-                        identifier) == num_count:
+                left_number = self.get_wagon_numer_left()
+                right_number = self.get_wagon_numer_right()
+                left_score = self._wagon_number_score(left_number)
+                right_score = self._wagon_number_score(right_number)
+                if right_number.count(identifier) == left_number.count(identifier) == num_count:
                     self.send_unrec()
                     return
                 self.wagon_image = self.get_img_id_left()
                 self.wagon_image2 = self.get_img_id_right()
-                if self.upload_right:
-                    if self.get_wagon_numer_right().count(identifier) <= self.get_wagon_numer_left().count(identifier):
-                        self.sending_data.wagonNumber = self.get_wagon_numer_right()
+                if self.upload_left and left_score[0]:
+                    self.sending_data.wagonNumber = left_number
+                    self.wagon_id_image = self.get_img_id_number_left()
+                elif self.upload_right and right_score[0]:
+                    self.sending_data.wagonNumber = right_number
+                    self.wagon_id_image = self.get_img_id_number_right()
+                elif self.upload_right:
+                    if right_score >= left_score:
+                        self.sending_data.wagonNumber = right_number
                         self.wagon_id_image = self.get_img_id_number_right()
                     else:
-                        self.sending_data.wagonNumber = self.get_wagon_numer_left()
+                        self.sending_data.wagonNumber = left_number
                         self.wagon_id_image = self.get_img_id_number_left()
                 else:
-                    if self.get_wagon_numer_right().count(identifier) >= self.get_wagon_numer_left().count(identifier):
-                        self.sending_data.wagonNumber = self.get_wagon_numer_left()
+                    if left_score >= right_score:
+                        self.sending_data.wagonNumber = left_number
                         self.wagon_id_image = self.get_img_id_number_left()
                     else:
-                        self.sending_data.wagonNumber = self.get_wagon_numer_right()
+                        self.sending_data.wagonNumber = right_number
                         self.wagon_id_image = self.get_img_id_number_right()
 
                 self.sending_data.scaleNumber = max(self.last_scale_weight)
@@ -2043,11 +2333,11 @@ class App(QMainWindow):
                 if self.sending_data.scaleNumber == 0 and not self.config.get(SCALE_DISABLE, False):
                     ans = ask_message(
                         stl=self.style_name,
-                        title="Tortishni tasdiqlash",
+                        title="Tarozi ogohlantirishsi",
                         message=(
-                            "Tarozi 0 kg qiymat ko'rsatmoqda.\n"
-                            "Iltimos, tarozi ulanganini va vagon to'liq tarozida turganini tekshiring.\n"
-                            "Shunga qaramay tortishni davom ettirasizmi?"
+                            "Tarozi hozir 0 kg ko'rsatmoqda.\n\n"
+                            "Tarozi to'g'ri ulanganligi va vagon tarozida to'liq turganligini tekshiring.\n"
+                            "Baribir tortishni davom ettirasizmi?"
                         ),
                         icon=QMessageBox.Icon.Warning
                     )
@@ -2060,6 +2350,7 @@ class App(QMainWindow):
                 self.progressbar = ProgressBar()
                 self.progressbar.change_style(style_name=self.style_name)
                 self.progressbar.show()
+                self._snapshot_pending_upload()
 
                 self.upload_thread: UploadThread = UploadThread(
                     data=self.sending_data,
@@ -2094,6 +2385,7 @@ class App(QMainWindow):
             self.sending_data.stationCode = self.config.get(STATION_CODE, default_station_code)
             self.sending_data.scaleCode = self.config.get(SCALE_CODE, default_scale_code)
             self.sending_data.createdDate = current_time()
+            self._snapshot_pending_upload()
 
             self.upload_thread: UploadThread = UploadThread(
                 data=self.sending_data,
@@ -2139,16 +2431,7 @@ class App(QMainWindow):
         if isinstance(self.video_thread_right, AutoVideoThread):
             self.video_thread_right.is_timeout = False
         if ans:
-            self.wagon_ids.append(self.sending_data.wagonNumber)
-            dx = {
-                wagonNumber: self.sending_data.wagonNumber,
-                wagonAttachId: self.wagon_image,
-                wagonAttachId2: self.wagon_image2,
-                wagonNumberAttachId: self.wagon_id_image,
-                scaleNumber: self.sending_data.scaleNumber,
-            }
-
-            dx_ = {
+            payload = self.pending_upload or {
                 wagonNumber: self.sending_data.wagonNumber,
                 scaleNumber: self.sending_data.scaleNumber,
                 createdDate: self.sending_data.createdDate,
@@ -2157,6 +2440,25 @@ class App(QMainWindow):
                 wagonAttachId: self.wagon_image,
                 wagonAttachId2: self.wagon_image2,
                 wagonNumberAttachId: self.wagon_id_image,
+            }
+            self.wagon_ids.append(payload.get(wagonNumber, identifier * num_count))
+            dx = {
+                wagonNumber: payload.get(wagonNumber, identifier * num_count),
+                wagonAttachId: payload.get(wagonAttachId),
+                wagonAttachId2: payload.get(wagonAttachId2),
+                wagonNumberAttachId: payload.get(wagonNumberAttachId),
+                scaleNumber: payload.get(scaleNumber, 0),
+            }
+
+            dx_ = {
+                wagonNumber: payload.get(wagonNumber, identifier * num_count),
+                scaleNumber: payload.get(scaleNumber, 0),
+                createdDate: payload.get(createdDate, current_time()),
+                stationCode: payload.get(stationCode, self.config.get(STATION_CODE, default_station_code)),
+                scaleCode: payload.get(scaleCode, self.config.get(SCALE_CODE, default_scale_code)),
+                wagonAttachId: payload.get(wagonAttachId),
+                wagonAttachId2: payload.get(wagonAttachId2),
+                wagonNumberAttachId: payload.get(wagonNumberAttachId),
             }
             if self.last_ttl == ttl:
                 dx_[sentAt] = current_time()
@@ -2174,6 +2476,7 @@ class App(QMainWindow):
             self.last_data_right: dict = {}
             self.wagon_image: Union[np.ndarray | None] = None
             self.wagon_id_image: Union[np.ndarray | None] = None
+            self.pending_upload = None
         else:
             if self.config.get(AUTO, False):
                 if self.sent_left_auto:

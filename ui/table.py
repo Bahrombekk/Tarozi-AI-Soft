@@ -375,15 +375,14 @@ class Table(QWidget):
         lt.addWidget(wagon_type_lbl)
         lt.addWidget(date_time_lbl)
 
-        self.scroll_area.verticalScrollBar().setValue(
-            self.scroll_area.verticalScrollBar().maximum()
-        )
+        self.scroll_area.verticalScrollBar().setValue(0)
 
-        self.layout__.addWidget(wd)
+        self.layout__.insertWidget(0, wd)
 
-    def clear_except_last(self):
+    def clear_except_last(self, keep: int = 9):
         count = self.layout__.count()
-        for i in range(count):
+        to_remove = max(0, count - keep)
+        for i in range(to_remove):
             item = self.layout__.takeAt(0)
             if item is None:
                 continue

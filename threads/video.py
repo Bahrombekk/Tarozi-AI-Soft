@@ -49,6 +49,7 @@ class VideoThread(BaseVideoThread):
         """frame o'qi → detect → annotate → emit. Lag = 0."""
         from threads.base_video import apply_draw_commands, to_pixmap
         start_time = time.time()
+        self._best_data: dict = {}
         while self.running:
             try:
                 frame = self.frames.get(timeout=0.1)
@@ -62,16 +63,30 @@ class VideoThread(BaseVideoThread):
                     now = time.time()
                     self.fps_signal.emit(f"FPS: {1 / max(0.01, now - start_time):.1f}")
                     start_time = now
-                is_valid = (data.get(wagonNumber, identifier * num_count).count(identifier) <= 3
-                            or data.get("candidates"))
+
+                wagon_present = BBOX in data
+                current_wn = data.get(wagonNumber, identifier * num_count)
+                best_wn = self._best_data.get(wagonNumber, identifier * num_count)
+
+                # Vagon kadrda turgan paytda eng yaxshi (kamroq x) raqamni saqlaymiz
+                if wagon_present and current_wn.count(identifier) < best_wn.count(identifier):
+                    self._best_data = data
+
+                # Emisiya uchun: vagon bor → eng yaxshi ma'lumot; yo'q → joriy (clear)
+                emit_data = self._best_data if (wagon_present and self._best_data) else data
+                is_valid = (emit_data.get(wagonNumber, identifier * num_count).count(identifier) <= 3
+                            or emit_data.get("candidates"))
+
                 self.cnt += 1
                 if self.cnt % self.max_count == 0:
                     self.cnt = 1
                     if is_valid:
                         self._had_detection = True
-                        self.data_signal.emit(data)
-                    elif getattr(self, "_had_detection", False):
+                        self.data_signal.emit(emit_data)
+                    elif getattr(self, "_had_detection", False) and not wagon_present:
+                        # Vagon kadrdan chiqdi — displayni tozalaymiz
                         self._had_detection = False
+                        self._best_data = {}
                         self.data_signal.emit(data)
             except Exception as err:
                 log(message=f"[VideoThread._inference_loop] {err}")
@@ -109,7 +124,7 @@ class VideoThread(BaseVideoThread):
                             continue
                         visible_w = min(img_w, x_max) - max(0, x_min)
                         if (conf >= self.d_conf and y_min > 5 and y_max < img_h - 5
-                                and visible_w > 100):
+                                and visible_w > 50):
                             x1 = max(0, x_min - offset - 4)
                             y1 = max(0, y_min - offset - 4)
                             x2 = min(img_w, x_max + offset + 4)

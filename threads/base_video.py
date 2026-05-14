@@ -107,6 +107,7 @@ class BaseVideoThread(QThread):
         self.rec_model, self.rec_lock = get_shared_rec_model(self.device, self.is_half)
 
         self.frames: Queue[np.ndarray] = Queue(maxsize=2)
+        self.latest_frame: np.ndarray | None = None
 
         self.thread: threading.Thread | None = None
 
@@ -114,6 +115,7 @@ class BaseVideoThread(QThread):
 
     def _push_frame(self, frame: np.ndarray) -> None:
         try:
+            self.latest_frame = frame.copy()
             if self.frames.full():
                 try:
                     self.frames.get_nowait()
@@ -276,7 +278,7 @@ class BaseVideoThread(QThread):
                     if cnf >= self.r_conf:
                         clr = (0, 255, 0)
                         num += str(cls)
-                    elif cnf >= 0.75:
+                    elif cnf >= 0.60:
                         clr = (255, 0, 255)
                         num += str(cls)
                     else:
