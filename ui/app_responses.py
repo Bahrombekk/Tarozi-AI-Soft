@@ -134,6 +134,11 @@ class ResponseMixin:
                 if len(self.last_scale_weight) > self.max_scale_weight:
                     self.last_scale_weight.pop(0)
             else:
+                if self.config.get("SCALE_DISABLE", False):
+                    self.com_port_status = "O'chirilgan"
+                elif not self.com_ports:
+                    self.com_port_status = "COM port topilmadi"
                 self.hor_left_widget.right_lbl.setText("0 kg")
         except (Exception, ValueError) as err:
+            self.com_port_status = "Xatolik"
             log(message=f"[App.scale_weight] {err}")

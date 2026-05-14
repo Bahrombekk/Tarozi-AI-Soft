@@ -394,12 +394,17 @@ def open_all_scales() -> list:
 
 
 def read_weight(ser) -> int:
+    weight, ok = read_weight_checked(ser)
+    return weight if ok else 0
+
+
+def read_weight_checked(ser) -> tuple[int, bool]:
     try:
         command: bytes = b"\x02AB03\x03"
         ser.write(command)
         response: bytes = ser.read_until(expected=b"\x03")
         if not response:
-            return 0
+            return 0, False
         if response[0] == 0x02 and response[-1] == 0x03:
             sign_char = chr(response[3])
             digits_str = response[4:10].decode("ascii")
@@ -409,11 +414,11 @@ def read_weight(ser) -> int:
                 weight_value = weight_value / (10 ** decimal_pos)
             if sign_char == "-":
                 weight_value = -weight_value
-            return int(weight_value)
-        return 0
+            return int(weight_value), True
+        return 0, False
     except Exception as err:
         log(message=f"[read_weight] {err}")
-    return 0
+    return 0, False
 
 
 # ---------- Settings file helpers ----------

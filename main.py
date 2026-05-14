@@ -60,7 +60,7 @@ def main():
             code = str(cfg.get(STATION_CODE, default_station_code))
             requests.post(
                 url="https://ai-project.das-uty.uz/api/wagon-scale-values/ping",
-                json={"stationCode": code},
+                json={"stationCode": code, "comPortStatus": "Tekshirilmoqda"},
                 headers={"Content-Type": "application/json"},
                 timeout=10,
             )

@@ -10,6 +10,7 @@ from core.config import (
     log, AUTO, THEME, LIGHT, SEND_TIME, BASE_URL, LOGIN_URL, USERNAME, PASSWORD,
     STATION_CODE, default_send_time, default_username, default_password, default_station_code,
     get_token_url, base_url, window_title, crop_left, crop_right,
+    SCALE_DISABLE,
 )
 from core.database import BufferDB
 from threads.workers import ScaleThread, LoginThread, ServerConnectionThread, ProgressThread, PingThread
@@ -111,6 +112,7 @@ class App(QMainWindow, BlurMixin, ThemeMixin, PasswordSettingsMixin, CamSettings
         self.max_scale_weight: int = 5
         self.com_ports: list[str] = []
         self.scales: list = []
+        self.com_port_status: str = "Tekshirilmoqda"
         self.sending_data = SendingData()
         self.send_time = self._time_format(send_second)
         self.send_current_time = self.send_time
@@ -122,7 +124,8 @@ class App(QMainWindow, BlurMixin, ThemeMixin, PasswordSettingsMixin, CamSettings
 
     def _init_threads(self):
         self.ping_thread = PingThread(
-            station_code=self.config.get(STATION_CODE, default_station_code)
+            station_code=self.config.get(STATION_CODE, default_station_code),
+            com_port_status_provider=lambda: self.com_port_status,
         )
         self.ping_thread.start()
 
@@ -159,8 +162,13 @@ class App(QMainWindow, BlurMixin, ThemeMixin, PasswordSettingsMixin, CamSettings
 
     def _start_scale_thread(self):
         self.find_scales()
+        if self.config.get(SCALE_DISABLE, False):
+            self.com_port_status = "O'chirilgan"
+            return
         self.scale_thread = ScaleThread(scales=self.scales, com_ports=self.com_ports)
         self.scale_thread.scale_signal.connect(self.scale_weight)
+        self.scale_thread.error_signal.connect(lambda msg: setattr(self, "com_port_status", "Aloqa yo'q"))
+        self.scale_thread.status_signal.connect(lambda status: setattr(self, "com_port_status", status))
         self.scale_thread.start()
 
     def _init_post_ui(self):

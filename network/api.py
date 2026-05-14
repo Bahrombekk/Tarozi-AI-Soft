@@ -107,7 +107,8 @@ def get_base_url(url: str = get_token_url) -> str:
     return parsed.netloc
 
 
-def ping(station_code: str, ping_url: str | None = None) -> bool:
+def ping(station_code: str, ping_url: str | None = None,
+         com_port_status: str | None = None) -> bool:
     from requests.adapters import HTTPAdapter
     urls = (
         [ping_url] if ping_url
@@ -121,14 +122,18 @@ def ping(station_code: str, ping_url: str | None = None) -> bool:
         session.mount("https://", HTTPAdapter(max_retries=0))
         session.mount("http://",  HTTPAdapter(max_retries=0))
         try:
+            payload = {"stationCode": str(station_code)}
+            if com_port_status is not None:
+                payload["comPortStatus"] = str(com_port_status)
             response = session.post(
                 url=url,
-                json={"stationCode": str(station_code)},
+                json=payload,
                 headers={"Content-Type": "application/json", "Connection": "close"},
                 timeout=8,
                 verify=False,
             )
-            log(message=f"[api.ping] status={response.status_code} stationCode={station_code}", level="INFO")
+            log(message=f"[api.ping] status={response.status_code} stationCode={station_code} "
+                        f"comPortStatus={com_port_status}", level="INFO")
             return response.status_code in (200, 201)
         except Exception as err:
             log(message=f"[api.ping] {url}: {err}", level="WARNING")

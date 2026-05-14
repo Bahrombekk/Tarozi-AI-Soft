@@ -1,11 +1,12 @@
 from __future__ import annotations
 import threading
+from typing import Callable
 from PyQt6.QtCore import QThread, pyqtSignal, QWaitCondition, QMutex
 from core.config import (
     scale_sleep_ms, base_url, get_token_url, default_username, default_password, log
 )
 from network.api import check_internet_connection, check_server, login, ping
-from utils.helpers import check_rtsp_connection, get_ip_and_port, read_weight, get_base_url
+from utils.helpers import check_rtsp_connection, get_ip_and_port, read_weight_checked, get_base_url
 
 
 class ServerConnectionThread(QThread):
@@ -121,6 +122,7 @@ class SaveThread(QThread):
 class ScaleThread(QThread):
     scale_signal = pyqtSignal(dict)
     error_signal = pyqtSignal(str)
+    status_signal = pyqtSignal(str)
 
     def __init__(self, scales: list, com_ports: list[str] | None = None):
         super().__init__()
@@ -144,9 +146,14 @@ class ScaleThread(QThread):
                         break
                     try:
                         port = str(ser.port)
-                        weight = read_weight(ser)
+                        weight, ok = read_weight_checked(ser)
                         massa[port] = weight
+                        if ok:
+                            self.status_signal.emit("Ishlayapti")
+                        else:
+                            self.status_signal.emit("Aloqa yo'q")
                     except Exception as err:
+                        self.status_signal.emit("Aloqa yo'q")
                         self.error_signal.emit(f"[ScaleThread.run] {ser.port}: aloqa yo'q. Xato: {err}")
                         log(message=f"[ScaleThread.run] {ser.port}: aloqa yo'q. Xato: {err}")
 
@@ -190,16 +197,23 @@ class ScaleThread(QThread):
 
 class PingThread(QThread):
 
-    def __init__(self, station_code: str, interval_ms: int = 60_000):
+    def __init__(self, station_code: str, interval_ms: int = 60_000,
+                 com_port_status_provider: Callable[[], str] | None = None):
         super().__init__()
         self._stop_event = threading.Event()
         self.station_code = station_code
         self.interval_ms = interval_ms
+        self.com_port_status_provider = com_port_status_provider
 
     def run(self):
         while not self._stop_event.is_set():
             try:
-                ping(station_code=self.station_code)
+                com_port_status = (
+                    self.com_port_status_provider()
+                    if self.com_port_status_provider is not None
+                    else None
+                )
+                ping(station_code=self.station_code, com_port_status=com_port_status)
             except Exception as err:
                 log(message=f"[PingThread.run] {err}", level="ERROR")
             total = 0

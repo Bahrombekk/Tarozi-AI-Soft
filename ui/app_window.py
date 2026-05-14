@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QMessageBox
 
 from core.config import log
 from threads.workers import ScaleThread
-from utils.helpers import open_all_scales as _open_all_scales
+from utils.helpers import open_all_scales as _open_all_scales, find_all_scale_ports
 from utils.helpers import ask_message
 
 
@@ -17,9 +17,17 @@ class WindowMixin:
 
     def find_scales(self):
         try:
+            available_ports = find_all_scale_ports()
             self.scales = _open_all_scales()
             self.com_ports = [str(s.port) for s in self.scales]
+            if self.scales:
+                self.com_port_status = "Tekshirilmoqda"
+            elif available_ports:
+                self.com_port_status = "COM port ochilmadi"
+            else:
+                self.com_port_status = "COM port topilmadi"
         except (Exception, ValueError) as err:
+            self.com_port_status = "Xatolik"
             log(message=f"[App.find_scales] {err}")
 
     def closeEvent(self, a0):

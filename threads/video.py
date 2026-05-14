@@ -68,8 +68,15 @@ class VideoThread(BaseVideoThread):
                 current_wn = data.get(wagonNumber, identifier * num_count)
                 best_wn = self._best_data.get(wagonNumber, identifier * num_count)
 
-                # Vagon kadrda turgan paytda eng yaxshi (kamroq x) raqamni saqlaymiz
-                if wagon_present and current_wn.count(identifier) < best_wn.count(identifier):
+                current_x = current_wn.count(identifier)
+                best_x = best_wn.count(identifier)
+
+                # Vagon kadrda turgan paytda eng yaxshi (kamroq x) raqamni saqlaymiz.
+                # Agar yangi vagon raqami ham to'liq bo'lsa, lekin oldingisidan farq qilsa,
+                # uni ham yangilash kerak; aks holda eski to'liq raqam panelda qolib ketadi.
+                if (wagon_present and
+                        (current_x < best_x or
+                         (current_x == 0 and best_x == 0 and current_wn != best_wn))):
                     self._best_data = data
 
                 # Emisiya uchun: vagon bor → eng yaxshi ma'lumot; yo'q → joriy (clear)

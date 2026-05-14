@@ -161,6 +161,7 @@ class App(QMainWindow):
 
         self.com_ports: list[str] = []
         self.scales: list = []
+        self.com_port_status: str = "Tekshirilmoqda"
         self.sending_data: SendingData = SendingData()
         self.pending_upload: dict | None = None
 
@@ -301,6 +302,8 @@ class App(QMainWindow):
         if not self.config.get(SCALE_DISABLE, False):
             self.scale_thread: ScaleThread = ScaleThread(scales=self.scales, com_ports=self.com_ports)
             self.scale_thread.scale_signal.connect(self.scale_weight)
+            self.scale_thread.error_signal.connect(self.scale_error)
+            self.scale_thread.status_signal.connect(self.set_com_port_status)
             self.scale_thread.start()
 
         self.server_connection_thread: ServerConnectionThread = ServerConnectionThread(
@@ -341,7 +344,8 @@ class App(QMainWindow):
         self.insert_histories()
 
         self.ping_thread: PingThread = PingThread(
-            station_code=str(self.config.get(STATION_CODE, default_station_code))
+            station_code=str(self.config.get(STATION_CODE, default_station_code)),
+            com_port_status_provider=lambda: self.com_port_status,
         )
         self.ping_thread.start()
 
@@ -2225,14 +2229,29 @@ class App(QMainWindow):
             if self.config.get(SCALE_DISABLE, False):
                 self.scales = []
                 self.com_ports = []
+                self.com_port_status = "O'chirilgan"
                 return
             available_ports = find_all_scale_ports()
             self.scales = open_all_scales()
             self.com_ports: list[str] = [str(i.port) for i in self.scales]
+            if self.scales:
+                self.com_port_status = "Tekshirilmoqda"
+            elif available_ports:
+                self.com_port_status = "COM port ochilmadi"
+            else:
+                self.com_port_status = "COM port topilmadi"
             if available_ports and not self.scales and not is_process_elevated():
                 QTimer.singleShot(1200, lambda: self._offer_admin_restart(available_ports))
         except Exception as err:
+            self.com_port_status = "Xatolik"
             log(message=f"[MainApp.find_scales] {err}")
+
+    def scale_error(self, msg: str):
+        self.com_port_status = "Aloqa yo'q"
+        log(message=f"[MainApp.scale_error] {msg}", level="WARNING")
+
+    def set_com_port_status(self, status: str):
+        self.com_port_status = status
 
     def _offer_admin_restart(self, ports: list[str]):
         try:
@@ -2281,8 +2300,13 @@ class App(QMainWindow):
                 if len(self.last_scale_weight) > self.max_scale_weight:
                     self.last_scale_weight.pop(0)
             else:
+                if self.config.get(SCALE_DISABLE, False):
+                    self.com_port_status = "O'chirilgan"
+                elif not self.com_ports:
+                    self.com_port_status = "COM port topilmadi"
                 self.hor_left_widget.right_lbl.setText("0 kg")
         except (Exception, ValueError) as err:
+            self.com_port_status = "Xatolik"
             log(message=f"[MainApp.scale_weight] {err}")
             show_message(
                 stl=self.style_name,
