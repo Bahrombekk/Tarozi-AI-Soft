@@ -1950,11 +1950,11 @@ class App(QMainWindow):
         if self.sending_data.scaleNumber == 0 and not self.config.get(SCALE_DISABLE, False):
             ans = ask_message(
                 stl=self.style_name,
-                title="Tarozi ogohlantirishsi",
+                title="Ogohlantirish",
                 message=(
-                    "Tarozi hozir 0 kg ko'rsatmoqda.\n\n"
-                    "Tarozi to'g'ri ulanganligi va vagon tarozida to'liq turganligini tekshiring.\n"
-                    "Baribir tortishni davom ettirasizmi?"
+                    "Tarozi 0 kg ko'rsatmoqda.\n\n"
+                    "Tarozi ulanganligi va vagon to'liq tarozida turganligini tekshiring.\n\n"
+                    "Davom ettirishni tasdiqlaysizmi?"
                 ),
                 icon=QMessageBox.Icon.Warning
             )
@@ -2357,11 +2357,11 @@ class App(QMainWindow):
                 if self.sending_data.scaleNumber == 0 and not self.config.get(SCALE_DISABLE, False):
                     ans = ask_message(
                         stl=self.style_name,
-                        title="Tarozi ogohlantirishsi",
+                        title="Ogohlantirish",
                         message=(
-                            "Tarozi hozir 0 kg ko'rsatmoqda.\n\n"
-                            "Tarozi to'g'ri ulanganligi va vagon tarozida to'liq turganligini tekshiring.\n"
-                            "Baribir tortishni davom ettirasizmi?"
+                            "Tarozi 0 kg ko'rsatmoqda.\n\n"
+                            "Tarozi ulanganligi va vagon to'liq tarozida turganligini tekshiring.\n\n"
+                            "Davom ettirishni tasdiqlaysizmi?"
                         ),
                         icon=QMessageBox.Icon.Warning
                     )
