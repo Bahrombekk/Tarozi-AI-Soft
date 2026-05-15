@@ -1,6 +1,7 @@
 from __future__ import annotations
 import threading
 from typing import Callable
+import serial
 from PyQt6.QtCore import QThread, pyqtSignal, QWaitCondition, QMutex
 from core.config import (
     scale_sleep_ms, base_url, get_token_url, default_username, default_password, log
@@ -136,16 +137,53 @@ class ScaleThread(QThread):
         except Exception as err:
             log(message=f"[ScaleThread.__init__.set_timeout] {err}")
 
+    def _try_reconnect(self, port_name: str, params: dict) -> "serial.Serial | None":
+        """Uzilgan portni qayta ochishga urinadi. Muvaffaqiyatli bo'lsa yangi Serial qaytaradi."""
+        try:
+            ser = serial.Serial(
+                port=port_name,
+                baudrate=params["baudrate"],
+                bytesize=params["bytesize"],
+                parity=params["parity"],
+                stopbits=params["stopbits"],
+                timeout=0.3,
+                write_timeout=0.5,
+            )
+            log(message=f"[ScaleThread] {port_name} qayta ulandi", level="INFO")
+            return ser
+        except Exception as err:
+            log(message=f"[ScaleThread.reconnect] {port_name}: {err}")
+            return None
+
     def run(self):
+        # failed_ports: {port_name: {"params": {...}, "retry_ms": int}}
+        failed_ports: dict[str, dict] = {}
+        reconnect_interval_ms = 3000
+
         try:
             while not self._stop_event.is_set() and not self.isInterruptionRequested():
                 massa: dict[str, int] = {p: 0 for p in self.com_ports}
 
+                # Uzilgan portlarni qayta ulanishga urinish
+                for port_name in list(failed_ports.keys()):
+                    if self._stop_event.is_set():
+                        break
+                    info = failed_ports[port_name]
+                    info["retry_ms"] -= scale_sleep_ms
+                    if info["retry_ms"] <= 0:
+                        new_ser = self._try_reconnect(port_name, info["params"])
+                        if new_ser is not None:
+                            self.scales.append(new_ser)
+                            del failed_ports[port_name]
+                            self.status_signal.emit("Ishlayapti")
+                        else:
+                            info["retry_ms"] = reconnect_interval_ms
+
                 for ser in list(self.scales):
                     if self._stop_event.is_set() or self.isInterruptionRequested():
                         break
+                    port = str(ser.port)
                     try:
-                        port = str(ser.port)
                         weight, ok = read_weight_checked(ser)
                         massa[port] = weight
                         if ok:
@@ -154,11 +192,28 @@ class ScaleThread(QThread):
                             self.status_signal.emit("Aloqa yo'q")
                     except Exception as err:
                         self.status_signal.emit("Aloqa yo'q")
-                        self.error_signal.emit(f"[ScaleThread.run] {ser.port}: aloqa yo'q. Xato: {err}")
-                        log(message=f"[ScaleThread.run] {ser.port}: aloqa yo'q. Xato: {err}")
+                        self.error_signal.emit(f"[ScaleThread.run] {port}: aloqa yo'q. Xato: {err}")
+                        log(message=f"[ScaleThread.run] {port}: aloqa yo'q. Xato: {err}")
+                        # Singan portni yopib, qayta ulanish navbatiga qo'yamiz
+                        params = {
+                            "baudrate": ser.baudrate,
+                            "bytesize": ser.bytesize,
+                            "parity": ser.parity,
+                            "stopbits": ser.stopbits,
+                        }
+                        try:
+                            ser.close()
+                        except Exception:
+                            pass
+                        self.scales.remove(ser)
+                        failed_ports[port] = {"params": params, "retry_ms": reconnect_interval_ms}
 
                 if self._stop_event.is_set() or self.isInterruptionRequested():
                     break
+
+                if not self.scales and failed_ports:
+                    self.status_signal.emit("Aloqa yo'q")
+
                 self.scale_signal.emit(massa)
                 total = 0
                 while total < scale_sleep_ms and not self._stop_event.is_set() and not self.isInterruptionRequested():
@@ -198,12 +253,14 @@ class ScaleThread(QThread):
 class PingThread(QThread):
 
     def __init__(self, station_code: str, interval_ms: int = 60_000,
-                 com_port_status_provider: Callable[[], str] | None = None):
+                 com_port_status_provider: Callable[[], str] | None = None,
+                 camera_status_provider: Callable[[], str] | None = None):
         super().__init__()
         self._stop_event = threading.Event()
         self.station_code = station_code
         self.interval_ms = interval_ms
         self.com_port_status_provider = com_port_status_provider
+        self.camera_status_provider = camera_status_provider
 
     def run(self):
         while not self._stop_event.is_set():
@@ -213,7 +270,13 @@ class PingThread(QThread):
                     if self.com_port_status_provider is not None
                     else None
                 )
-                ping(station_code=self.station_code, com_port_status=com_port_status)
+                camera_status = (
+                    self.camera_status_provider()
+                    if self.camera_status_provider is not None
+                    else None
+                )
+                ping(station_code=self.station_code, com_port_status=com_port_status,
+                     camera_status=camera_status)
             except Exception as err:
                 log(message=f"[PingThread.run] {err}", level="ERROR")
             total = 0

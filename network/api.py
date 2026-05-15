@@ -108,7 +108,8 @@ def get_base_url(url: str = get_token_url) -> str:
 
 
 def ping(station_code: str, ping_url: str | None = None,
-         com_port_status: str | None = None) -> bool:
+         com_port_status: str | None = None,
+         camera_status: str | None = None) -> bool:
     from requests.adapters import HTTPAdapter
     urls = (
         [ping_url] if ping_url
@@ -123,8 +124,9 @@ def ping(station_code: str, ping_url: str | None = None,
         session.mount("http://",  HTTPAdapter(max_retries=0))
         try:
             payload = {"stationCode": str(station_code)}
-            if com_port_status is not None:
-                payload["comPortStatus"] = str(com_port_status)
+            combined = " | ".join(filter(None, [com_port_status, camera_status]))
+            if combined:
+                payload["comPortStatus"] = combined
             response = session.post(
                 url=url,
                 json=payload,
@@ -133,7 +135,7 @@ def ping(station_code: str, ping_url: str | None = None,
                 verify=False,
             )
             log(message=f"[api.ping] status={response.status_code} stationCode={station_code} "
-                        f"comPortStatus={com_port_status}", level="INFO")
+                        f"comPortStatus={payload.get('comPortStatus')}", level="INFO")
             return response.status_code in (200, 201)
         except Exception as err:
             log(message=f"[api.ping] {url}: {err}", level="WARNING")

@@ -343,9 +343,17 @@ class App(QMainWindow):
         self.login_thread.start()
         self.insert_histories()
 
+        def _camera_status() -> str:
+            l_ok = getattr(self, "running_left", False) and str(getattr(self, "cam_url_1", "")).startswith("rtsp")
+            r_ok = getattr(self, "running_right", False) and str(getattr(self, "cam_url_2", "")).startswith("rtsp")
+            left = "Ishlayapti" if l_ok else "O'chgan"
+            right = "Ishlayapti" if r_ok else "O'chgan"
+            return f"Chap:{left} O'ng:{right}"
+
         self.ping_thread: PingThread = PingThread(
             station_code=str(self.config.get(STATION_CODE, default_station_code)),
             com_port_status_provider=lambda: self.com_port_status,
+            camera_status_provider=_camera_status,
         )
         self.ping_thread.start()
 
