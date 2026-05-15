@@ -346,7 +346,8 @@ class WagonChoiceDialog(QDialog):
         title.setStyleSheet(f"color: {txt};")
         root.addWidget(title)
 
-        subtitle = QLabel("Kamera ikkita to'liq raqam aniqladi. Iltimos, to'g'ri raqamni tanlang.")
+        subtitle = QLabel("Kamera bir nechta to'liq raqam aniqladi. Iltimos, to'g'ri raqamni tanlang.")
+        subtitle.setTextFormat(Qt.TextFormat.PlainText)
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle.setStyleSheet(f"color: {txt2}; font-size: 13px;")
         root.addWidget(subtitle)
@@ -356,6 +357,15 @@ class WagonChoiceDialog(QDialog):
         sep.setFrameShape(QFrame.Shape.HLine)
         sep.setStyleSheet(f"color: {brd};")
         root.addWidget(sep)
+
+        # Bir xil raqamlardan faqat eng yuqori ishonchlilik bilan birini qoldirish
+        from core.config import wagonNumber as _wn_key, CONF as _conf_key
+        _seen: dict = {}
+        for c in candidates:
+            wn = c.get(_wn_key)
+            if wn not in _seen or c.get(_conf_key, 0) > _seen[wn].get(_conf_key, 0):
+                _seen[wn] = c
+        candidates = list(_seen.values())
 
         # Kardlar qatori
         cards_row = QHBoxLayout()
